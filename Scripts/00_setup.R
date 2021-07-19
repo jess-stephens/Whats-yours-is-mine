@@ -20,11 +20,11 @@ library(here)
 install.packages("skimr")
 library(skimr)
 
-setwd("C:/Users/jStephens/Documents/GitHub/Whats-yours-is-mine")
 
-si_setup()
+setwd("C:/Users/jStephens/Documents/Zim/Whats-yours-is-mine")
 
-here("C:/Users/jStephens/Documents/GitHub/Whats-yours-is-mine")
+#si_setup()
+
 
 
 
