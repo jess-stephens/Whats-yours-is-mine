@@ -1,18 +1,29 @@
-
+source("Scripts/00_setup.R")
 
 df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
-                sheet = "Data")
+                sheet = "Data",
+                col_types = "text") %>%
+  janitor::clean_names() %>%
+  mutate(period = as.Date(as.integer(period),
+                          origin = "1900-01-01"),
+         result_value = as.integer(result_value))
 
-  view(df)
-  glimpse(df)
-  names(df)
+#view(df)
+glimpse(df)
+names(df)
 
-  test <- df %>%
-    janitor::clean_names() %>%
-    select(-population_type) %>%
-    #subset(!is.na(`POPULATION TYPE`)) %>%
-    view
-  #populations type not getting imported...
+df %>%
+  distinct(indicator) %>%
+  pull()
+
+
+df %>% distinct(indicator)
+
+  df %>% distinct(population_type)
+
+  df %>% distinct(other_disaggregate) %>% pull()
+
+
 
 
   ####################################################################
@@ -20,25 +31,27 @@ df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
   ####################################################################
 
   df2 <- df %>%
-    clean_names() %>% #part of janitor package, for machine readable variable names/  makes all lowercase and replaces spaces with "_"
     mutate(operatingunit = "Zimbabwe",
            orgunit = NA,
-           orgunitid = NA) %>% #add column for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
-    view
+           orgunitid = NA) #add column for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
 
-
+  #df2 %>% view
 
   #check clean names and new columns
   test <- df2 %>%
-    subset(indicator == c("TX_PVLS_ELIGIBLE")) %>%
-    view
+    filter(indicator == c("TX_PVLS_ELIGIBLE"))
+
+  #test %>% view
 
   test <- df2 %>%
-    subset(!is.na(other_disaggregate)) %>%
-    view
+    subset(!is.na(other_disaggregate))
+
+  #test %>% view
 
   test <- df2 %>%
-    subset(!is.na(population_type)) %>%
+    subset(!is.na(population_type))
+
+  test %>%
     view
 
   df2 %>%
@@ -51,23 +64,37 @@ df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
 
   df3 <- df2 %>%
     # something is happening that is dropping some of the correct indicators....
-    # subset(indicator==c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "TX_NEW_VERIFY", "TX_CURR_VERIFY", "TX_PVLS_VERIFY", "TX_RTT_VERIFY",
-    #        "TX_PVLS_VERIFY","TX_PVLS_SAMPLE", "TX_PVLS_RESULT_DOCUMENTED", "PMTCT_EID_ELIGIBLE", "PMTCT_EID_SAMPLE", "PMTCT_EID_RESULT_DOCUMENTED",
-    #        "PrEP_SCREEN", "PrEP_ELIGIBLE", "PrEP_1MONTH", "PrEP_NEW_VERIFY", "PrEP_CURR_VERIFY", "SC_ARVDISP", "SC_LMIS", "SC_CURR",
-    #        "VMMC_AE", "OVC_OFFER", "OVC_ENROLL")) %>% #pull only the CIGB indicators, none of Zim CI
+    filter(indicator %in% c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "TX_NEW_VERIFY", "TX_CURR_VERIFY", "TX_PVLS_VERIFY", "TX_RTT_VERIFY",
+           "TX_PVLS_VERIFY","TX_PVLS_SAMPLE", "TX_PVLS_RESULT_DOCUMENTED", "PMTCT_EID_ELIGIBLE", "PMTCT_EID_SAMPLE", "PMTCT_EID_RESULT_DOCUMENTED",
+           "PrEP_SCREEN", "PrEP_ELIGIBLE", "PrEP_1MONTH", "PrEP_NEW_VERIFY", "PrEP_CURR_VERIFY", "SC_ARVDISP", "SC_LMIS", "SC_CURR",
+           "VMMC_AE", "OVC_OFFER", "OVC_ENROLL")) %>% #pull only the CIGB indicators, none of Zim CI
     rename(mech_code = mechanism_id,
            partner = partner_name,
            numdenom = numerator_denominator,
            population = population_type,
            otherdisaggregate = other_disaggregate,
-           val = result_value) %>% #name variables so the match CIGB template, expect for period which happens below
-    select(c("period", "orgunit", "orgunitid", "mech_code", "partner",
-             "operatingunit", "psnu", "indicator", "sex", "age", "population",
-             "otherdisaggregate", "numdenom", "val")) %>%
+           val = result_value) #name variables so the match CIGB template, expect for period which happens below
+
+
+  df3 <- df3 %>%
+    select(!c(annual_target_value,
+              starts_with("required")))
+    # select(c("period", "orgunit", "orgunitid", "mech_code", "partner",
+    #          "operatingunit", "psnu", "indicator", "sex", "age", "population",
+    #          "otherdisaggregate", "numdenom", "val")) %>%
     #keep only the CIGB template variables
     #CHECK ERRORS RECODING TX_PVLS_ELIGIBLE TO OVC - tried 2 options
 
-    # mutate(indicator=ifelse(indicator=="TX_PVLS_ELIGIBLE" &  otherdisaggregate=="OVC", "OVC_VL_ELIGIBLE", "TX_PVLS_ELIGIBLE"),
+  df3 %>%
+    #filter(indicator == "TX_PVLS_ELIGIBLE" & otherdisaggregate == "OVC")
+    mutate(indicator = case_when(
+      indicator == "TX_PVLS_ELIGIBLE" & otherdisaggregate == "OVC" ~ "OVC_VL_ELIGIBLE",
+      indicator == "TX_PVLS_RESULT_DOCUMENTED" & otherdisaggregate=="OVC" ~ "OVC_VLR",
+      indicator=="TX_PVLS_VERIFY" & otherdisaggregate=="OVC" ~ "OVC_VLS",
+      TRUE ~ indicator
+    ))
+
+    mutate(indicator = ifelse(indicator == "TX_PVLS_ELIGIBLE" & otherdisaggregate == "OVC", "OVC_VL_ELIGIBLE", "TX_PVLS_ELIGIBLE"))
     #       indicator= ifelse(indicator=="TX_PVLS_RESULT_DOCUMENTED" &  otherdisaggregate=="OVC", "OVC_VLR", "TX_PVLS_RESULT_DOCUMENTED"),
     #         indicator= ifelse(indicator=="TX_PVLS_VERIFY" & otherdisaggregate=="OVC", "OVC_VLS", "TX_PVLS_VERIFY")) %>% #separating out OVC from TX_PVLS
     #
@@ -156,6 +183,12 @@ df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
   ####################################################################
   #                        DREAM_GEND_NORM
   ####################################################################
+
+  Dreams %>%
+    filter(indicator=="DREAMS_GEND_NORM") %>%
+    rowwise() %>%
+    mutate(otherdisaggregate = otherdisaggregate %>% str_split(":") %>% unlist() %>% last() %>% str_trim(side = "both")) %>%
+    ungroup()
 
   Dreams_Gend<-Dreams %>%
     # subset(indicator==c("DREAMS_GEND_NORM")) %>% #use subset to check work
