@@ -52,5 +52,6 @@ vignettes/*.pdf
 #nothing from these folders
 AI/*
 GIS/*
+Data/*
 Images/*
 Graphics/*
