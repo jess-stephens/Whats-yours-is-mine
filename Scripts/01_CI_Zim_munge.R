@@ -1,3 +1,5 @@
+#240-280 unfinished, period and numdenom
+
 source("Scripts/00_setup.R")
 
 df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
@@ -120,7 +122,10 @@ df %>% distinct(indicator)
   # df4 %>%
   #   distinct(indicator) %>%
   #   pull()
-
+  # df5 %>%
+  #          filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+  #         distinct(population) %>%
+  #        pull()
 
 
   ####################################################################
@@ -134,18 +139,21 @@ df %>% distinct(indicator)
          numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator", "N",
                   ifelse(numdenom=="Denominator" | numdenom=="denominator", "D", numdenom)),
         # Remove population of "Non-KP (general population)" for most indicator (only in PrEP - but not 1 mo & VERIFY vars)
-    #     population = ifelse(indicator == "DREAMS_FP" | indicator == "DREAMS_GEND_NORM" | indicator == "GEND_GBV" | indicator == "OVC_ENROLL" | indicator == "OVC_OFFER" | indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS" |
-    #                          indicator == "PMTCT_EID_ELIGIBLE" | indicator == "PMTCT_EID_SAMPLE_DOCUMENTED" | indicator == "PrEP_1MONTH" | indicator == "SC_ARVDISP" | indicator == "SC_CURR" | indicator == "SC_LMIS" |
-    #                          indicator == "TX_PVLS_ELIGIBLE" | indicator == "TX_PVLS_RESULT_DOCUMENTED" | indicator == "TX_PVLS_SAMPLE" | indicator == "VMMC_AE"
-    #                        & population == "Non-KP (general population)", NA, population))) %>%
-    # view
        population = case_when(
-                   indicator == "DREAMS_FP" | indicator == "DREAMS_GEND_NORM" | indicator == "GEND_GBV" | indicator == "OVC_ENROLL" | indicator == "OVC_OFFER" | indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS" |
-                        indicator == "PMTCT_EID_ELIGIBLE" | indicator == "PMTCT_EID_SAMPLE_DOCUMENTED" | indicator == "PrEP_1MONTH" | indicator == "SC_ARVDISP" | indicator == "SC_CURR" | indicator == "SC_LMIS" |
-                        indicator == "TX_PVLS_ELIGIBLE" | indicator == "TX_PVLS_RESULT_DOCUMENTED" | indicator == "TX_PVLS_SAMPLE" | indicator == "VMMC_AE"
-                      & population == "Non-KP (general population)" ~ NA_character_,
-                  indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS"  & population== "OVC" ~ NA_character_,
-                  TRUE ~ population))
+         (indicator == "DREAMS_FP" | indicator == "DREAMS_GEND_NORM" | indicator == "GEND_GBV" | indicator == "OVC_ENROLL" | indicator == "OVC_OFFER" | indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS" |
+           indicator == "PMTCT_EID_ELIGIBLE" | indicator == "PMTCT_EID_SAMPLE_DOCUMENTED" | indicator == "PrEP_1MONTH" | indicator == "SC_ARVDISP" | indicator == "SC_CURR" | indicator == "SC_LMIS" |
+           indicator == "TX_PVLS_ELIGIBLE" | indicator == "TX_PVLS_RESULT_DOCUMENTED" | indicator == "TX_PVLS_SAMPLE" | indicator == "VMMC_AE")
+         & (population == "Non-KP (general population)") ~ NA_character_,
+         (indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS")  & (population== "OVC") ~ NA_character_,
+         TRUE ~ population),
+       sex=case_when(
+         sex=="Females"~"Female",
+         sex=="Males"~"Male",
+         sex=="Not recorded"~NA_character_,
+         TRUE~sex  ))
+
+
+
 
 ##test for rrecoding worked
   # test <- df4 %>%
@@ -161,6 +169,23 @@ df %>% distinct(indicator)
   #   view
   ## count 168
 
+  # df4 %>%
+  #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+  #   distinct(population) %>%
+  #   pull()
+# #[1] NA                                "Female sex workers (FSW)"        "Men who have sex with men (MSM)" "Transgender people (TG)"         "Non-KP (general population)
+  # df5 %>%
+  #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+  #   distinct(population) %>%
+  #   pull()
+# NA
+  # df4 %>%
+  #   distinct(sex) %>%
+  #   pull()
+  # df5 %>%
+  #   distinct(sex) %>%
+  #   pull()
+
 
 
   #issues in  age
@@ -175,6 +200,8 @@ df %>% distinct(indicator)
   # [25] "10-14 (Specific)"   "15-17 (Specific)"   "15-19 (Specific)"   "20-24 (Specific)"   "OVC: 18-20"         "OVC: 18+ caregiver"
   # [31] "15 - 19"            "20 - 24"            "25 - 29"            "30 - 34"            "35 - 39"            "40 - 44"
   # [37] "45 - 49"            "0-1"
+
+  # "OVC: 18-20"         "OVC: 18+ caregiver"    "18+ caregiver"
 
 
   #drop from the string anything after (
@@ -213,6 +240,73 @@ df %>% distinct(indicator)
     distinct(age) %>%
     pull()
 
+
+  ############################################################################################################
+
+
+  ####################################################################
+  #                        RECODE PERIOD
+  ####################################################################
+  # mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
+  #                               "FY21 Q1",
+  #                               ifelse(period>="2021-01-01" & period<="2021-03-31",
+  #                                      "FY21 Q2",
+  #                                      ifelse(period>="2021-04-01" & period<="2021-06-30",
+  #                                             "FY21 Q3",
+  #                                             ifelse(period>="2021-07-01" & period<="2021-09-30",
+  #                                                    "FY21 Q4",
+  #                                                    # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
+  #                                                    #              "FY21 Q1 - Q2",
+  #                                                    # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
+  #                                                    #             "FY21 Q3 - Q4",
+  #                                                    NA))))) %>%
+  #   view
+  #
+
+
+  # date <- df %>%
+  #   clean_names() %>%
+  #   mutate(reportingperiod=ifelse(period %in% "2020-10-01":"2020-12-31",
+  #                                 "FY21 Q1",
+  #                                 ifelse(period %in% "2021-01-01":"2021-03-31",
+  #                                        "FY21 Q2",
+  #                                        ifelse(period %in% "2021-04-01":"2021-06-30",
+  #                                               "FY21 Q3",
+  #                                               ifelse(period %in% "2021-07-01":"2021-09-30",
+  #                                                      "FY21 Q4",
+  #                                                      NA))))) %>%
+  #   view
+
+
+
+  ####################################################################
+  #                        RECODE PERIOD
+  ####################################################################
+
+
+
+  ############################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   ####################################################################
   #                        DREAM_FP
   ####################################################################
@@ -239,15 +333,13 @@ df %>% distinct(indicator)
     subset(indicator==c("DREAMS_FP") & !is.na(otherdisaggregate)) %>%
     #  logic to make age and sex null if other disaggregate is not null,
     mutate(age=ifelse(!is.na(otherdisaggregate), NA, age),
-           sex=ifelse(!is.na(otherdisaggregate), NA, sex)) %>%
+           sex=ifelse(!is.na(otherdisaggregate), NA, sex))
     #consider using the opposite logic to make otherdisagg null if age or sex is not null, but currently no use case
-    view
   #2 obs
 
   #combine Dreams_FP2 with Dreams_agesex: row bind
   Dreams<-rbind(Dreams_agesex, Dreams_FP2)
   #9144 obs
-
 
 
 
@@ -289,22 +381,21 @@ df %>% distinct(indicator)
 
 
 
-
   ####################################################################
   #                        GEND_GBV
   ####################################################################
 
-  #review data for this indicator
-  test<- Dreams_Gend_Norm %>%
-    subset(indicator==c("GEND_GBV")) %>%
-    view
-  #951 obs
-
-  #check if any otherdisaggs need to be recoded
-  Dreams_Gend_Norm %>%
-    filter(indicator==c("GEND_GBV")) %>%
-    distinct(otherdisaggregate) %>%
-    pull()
+  # Dreams_Gend_Norm %>%
+  #   filter(indicator==c("GEND_GBV")) %>%
+  #   distinct(population) %>%
+  #   pull()
+  # # [1] NA    "OVC"  -> only NA is allowable, recoded OVC to NA
+  #
+  # #check if any otherdisaggs need to be recoded
+  # Dreams_Gend_Norm %>%
+  #   filter(indicator==c("GEND_GBV")) %>%
+  #   distinct(otherdisaggregate) %>%
+  #   pull()
   #[1] "Sexual violence - received PEP"        "Physical and/or emotional violence"    "Sexual violence - did not receive PEP"
   # [4] "Physical or emotional violence"
 
@@ -313,7 +404,10 @@ df %>% distinct(indicator)
   GEND_GBV<-Dreams_Gend_Norm %>%
     mutate(otherdisaggregate=case_when(
           indicator=="GEND_GBV" & otherdisaggregate=="Physical or emotional violence" ~ "Violence Service Type: Physical and/or emotional violence",
-          TRUE~ otherdisaggregate))
+          TRUE~ otherdisaggregate),
+          population=case_when(indicator=="GEND_GBV"~NA_character_,
+          TRUE~population) )
+
 
 
   # Sexual violence - received PEP  -->   Violence Service Type: Sexual violence &  PEP: completed PEP
@@ -334,11 +428,16 @@ df %>% distinct(indicator)
 
 
 
+
   ####################################################################
   #                       OVC_ENROLL/OVC_OFFER
   ####################################################################
 
-
+  # GEND_GBV %>%
+  #   filter(indicator==c("OVC_OFFER")) %>%
+  #   distinct(population) %>%
+  #   pull()
+## population ovc only - > recode to NA
 
   #check if any otherdisaggs need to be recoded
   # GEND_GBV %>%
@@ -350,15 +449,15 @@ df %>% distinct(indicator)
   #   distinct(otherdisaggregate) %>%
   #   pull()
   #no otherdisaggregates for these indicators
-  # #-> other disaggreagate recoded to "OVC or Caregiver: OVC"
+  # #Tableau identified -> other disaggreagate recoded to "OVC or Caregiver: OVC"
 
 
   OVC_ENROLL_OFFER<-GEND_GBV %>%
-    mutate(otherdisaggregate=ifelse(indicator=="OVC_OFFER"|indicator=="OVC_ENROLL", "OVC or Caregiver: OVC", otherdisaggregate)) %>%
-    view
-
-
-
+  mutate(otherdisaggregate=case_when(
+    (indicator=="OVC_OFFER" | indicator=="OVC_ENROLL") ~ "OVC or Caregiver: OVC",
+    TRUE~ otherdisaggregate),
+    population=case_when((indicator=="OVC_OFFER" | indicator=="OVC_ENROLL")~NA_character_,
+    TRUE~population) )
 
 
   ####################################################################
@@ -366,10 +465,10 @@ df %>% distinct(indicator)
   ####################################################################
 
 #   #check if any otherdisaggs/pop need to be recoded
-#   OVC_ENROLL_OFFER %>%
-#     filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
-#     distinct(otherdisaggregate) %>%
-#     pull()
+  # OVC_ENROLL_OFFER %>%
+  #   filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+  #   distinct(otherdisaggregate) %>%
+  #   pull()
 
 # [1] "OVC"
 # no changes to disagg
@@ -385,6 +484,11 @@ df %>% distinct(indicator)
   #                       PMTCT_EID_ELIGIBLE/PMTCT_EID_SAMPLE_DOCUMENTED
   ####################################################################
 
+  #check populations are NA
+  # OVC_ENROLL_OFFER %>%
+  #   filter(indicator==c("PMTCT_EID_SAMPLE_DOCUMENTED")) %>%
+  #   distinct(population) %>%
+  #   pull()
 
   # Error report: Recode "<01" to "0-12 months"
 
@@ -414,12 +518,28 @@ df %>% distinct(indicator)
   #                       PREP_1MONTH
   ####################################################################
 
+  # PMTCT %>%
+  #   filter(indicator==c("PrEP_1MONTH")) %>%
+  #   distinct(population) %>%
+  #   pull()
+  #should have NA as populations
 
   #Zim only collecting the 1st month. add this to the otherdisaggregate
 
-  PREP_1MO <- PMTCT %>%
-    mutate(otherdisaggregate=  ifelse(indicator=="PrEP_1MONTH", "Reporting Month: Month 1 of Reporting Quarter", otherdisaggregate))
 
+  PREP_1MO<-PMTCT %>%
+    mutate(otherdisaggregate=case_when(
+      indicator=="PrEP_1MONTH"  ~  "Reporting Month: Month 1 of Reporting Quarter",
+      TRUE~ otherdisaggregate),
+      population=case_when(indicator=="PrEP_1MONTH" ~NA_character_,
+                           TRUE~population) )
+
+
+
+  PREP_1MO %>%
+    filter(indicator==c("PrEP_1MONTH")) %>%
+    distinct(population) %>%
+    pull()
 
 
   ####################################################################
@@ -428,11 +548,12 @@ df %>% distinct(indicator)
 
 
   #no other disaggregates identified (pregnant/breastfeeding), no changes necessary at this time
-#
-#   PREP_1MO %>%
-#      filter(indicator==c("PrEP_ELIGIBLE")) %>%
-#     distinct(population) %>%
-#     pull()
+
+  #prep_elg can have all populations -> no changes made
+  # PREP_1MO %>%
+  #    filter(indicator==c("PrEP_ELIGIBLE")) %>%
+  #   distinct(population) %>%
+  #   pull()
   # [1] NA                                "Men who have sex with men (MSM)" "Female sex workers (FSW)"
   # [4] "Transgender people (TG)"         "Non-KP (general population)"
 
@@ -443,10 +564,10 @@ df %>% distinct(indicator)
 
 #
 #   #no other disaggregates, but population and age overlap
-#   PREP_1MO %>%
-#     filter(indicator==c("PrEP_SCREEN")) %>%
-#     distinct(population) %>%
-#     pull()
+  # PREP_1MO %>%
+  #   filter(indicator==c("PrEP_SCREEN")) %>%
+  #   distinct(population) %>%
+  #   pull()
   #some reporting age and other disaggregate together, need to separate
 
   # keep ages in in main dataset, but remove population type
@@ -466,151 +587,160 @@ df %>% distinct(indicator)
   PrEP_SCREEN<-rbind(PrEP_SCREEN_type, PrEP_SCREEN_age)
 
 
-  ***************************************************************************************************************
-#2021.07.24
 
   ####################################################################
   #                       SC_ARVDISP
   ####################################################################
 
-  #test
-  # df4 %>%
-  #   subset(indicator==c("SC_ARVDISP")) %>%
-  #   group_by(otherdisaggregate) %>%
-  #   skim
+  # PrEP_SCREEN %>%
+  #   filter(indicator==c("SC_ARVDISP")) %>%
+  #   distinct(otherdisaggregate) %>%
+  #   pull()
+  #
+  # # [3] "ARV Category: DTG 10 bottles (30-count)" wont get added to cigb because not a valid disag - recode to other pediatric
+  # # also checked age, sex, pop all correctly NA
 
-  SC_ARVDISP<- df4 %>%
+  SC_ARVDISP<- PrEP_SCREEN %>%
     mutate(numdenom=ifelse(indicator=="SC_ARVDISP","N","N"),
            #recode from categories seen in excel pivot
            otherdisaggregate=ifelse(otherdisaggregate=="ARV Category: DTG 10 bottles (30-count)", "ARV Category: Other (Pediatric) bottles dispensed" , otherdisaggregate),
           #recode from errors in tableau report - note seen in this data
-           otherdisaggregate=ifelse(otherdisaggregate=="NVP (Pediatric), (not including NVP 10) bottles", "ARV Category: NVP (Pediatric) bottles dispensed - not including NVP 10" , otherdisaggregate)) %>%
-     view
+           otherdisaggregate=ifelse(otherdisaggregate=="NVP (Pediatric), (not including NVP 10) bottles", "ARV Category: NVP (Pediatric) bottles dispensed - not including NVP 10" , otherdisaggregate))
 
   #check recoding
   SC_ARVDISP %>%
-      subset(indicator==c("SC_ARVDISP")) %>%
-      group_by(otherdisaggregate) %>%
-      skim
-
+    filter(indicator==c("SC_ARVDISP")) %>%
+    distinct(otherdisaggregate) %>%
+    pull()
 
   ####################################################################
   #                       SC_CURR
   ####################################################################
+#   SC_ARVDISP %>%
+#     filter(indicator==c("SC_CURR")) %>%
+#     distinct(otherdisaggregate) %>%
+#     pull()
 
-   df4 %>%
-    subset(indicator==c("SC_CURR")) %>%
-       group_by(otherdisaggregate) %>%
-      skim
-    view
+# #sc_arvdisp fixed errors in sc_curr - code below is duplicative
 
-    SC_CURR<- df4 %>%
-    mutate(numdenom=ifelse(indicator=="SC_CURR","N","N"),
-           otherdisaggregate=ifelse(otherdisaggregate=="ARV Category: DTG 10 bottles (30-count)", "ARV Category: Other (Pediatric) bottles dispensed" , otherdisaggregate)) %>%
-           view
+    # SC_CURR<- SC_ARVDISP %>%
+    # mutate(numdenom=ifelse(indicator=="SC_CURR","N","N"),
+    #        otherdisaggregate=ifelse(otherdisaggregate=="ARV Category: DTG 10 bottles (30-count)", "ARV Category: Other (Pediatric) bottles dispensed" , otherdisaggregate)) %>%
+    #        view
 
-
-    SC_CURR %>%
-    subset(indicator==c("SC_CURR")) %>%
-    group_by(otherdisaggregate) %>%
-    skim
-
+  ####################################################################
+  #                       SC_LMIS
+  ####################################################################
+  #not currently collecting
 
     ####################################################################
     #                       TX_PVLS_ELIGIBLE
     ####################################################################
+ ``## checked pop, otherdisag, age, sex. No issues with age/sex and population overlap -> no changes
+     # SC_ARVDISP %>%
+    #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+    #   distinct(population) %>%
+    #   pull()
 
 
     ####################################################################
-    #                       TX_PVLS_PVLS_RESULT_DOCUMENTED
+    #                       TX_PVLS_RESULT_DOCUMENTED
     ####################################################################
-
+  ``## checked pop, otherdisag, age, sex. No issues with age/sex and population overlap -> no changes
+  # SC_ARVDISP %>%
+  #   filter(indicator==c("TX_PVLS_RESULT_DOCUMENTED")) %>%
+  #   distinct(population) %>%
+  #   pull()
 
     ####################################################################
     #                       TX_PVLS_SAMPLE
     ####################################################################
-
+  ## checked pop, otherdisag, age, sex. No issues with age/sex and population overlap -> no changes
+  # SC_ARVDISP %>%
+  #   filter(indicator==c("TX_PVLS_SAMPLE")) %>%
+  #   distinct(population) %>%
+  #   pull()
 
     ####################################################################
     #                       TX_PVLS_VERIFY
     ####################################################################
-
+  ## checked pop, otherdisag, age, sex. No issues with age/sex and population overlap -> no changes
+  # SC_ARVDISP %>%
+  #   filter(indicator==c("TX_PVLS_VERIFY")) %>%
+  #   distinct(population) %>%
+  #   pull()
 
     ####################################################################
     #                       OVC_VL_ELIGIBLE
     ####################################################################
 
+  #already dropped population as OVC, only otherdisagg=OVC
+
+    # SC_ARVDISP %>%
+    #   filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+    #   distinct(otherdisaggregate) %>%
+    #   pull()
+# "OVC"-  appropriate other disagg -> no changes
+
+  #18-20 not in CIGB --> recode to 18+
+  # SC_ARVDISP %>%
+  #   filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+  #   distinct(age) %>%
+  #   pull()
+  # # [1] "15-17" "5-9"   "18+"   "10-14" "1-4"   "18-20" "<1"
+  #
+
+
+
 
     ####################################################################
     #                      OVC_VLR
     ####################################################################
-
+  SC_ARVDISP %>%
+    filter(indicator==c("OVC_VLR")) %>%
+    distinct(age) %>%
+    pull()
+  #18-20 not in CIGB --> recode to 18+
 
     ####################################################################
     #                       OVC_VLS
     ####################################################################
+
+  # SC_ARVDISP %>%
+  #   filter(indicator==c("OVC_VLS")) %>%
+  #   distinct(age) %>%
+  #   pull()
+  #18-20 not in CIGB --> recode to 18+
+
 
 
     ####################################################################
     #                       TX_RTT_VERIFY
     ####################################################################
 
+#no clear issues in pivot
 
     ####################################################################
     #                       VMMC_AE
     ####################################################################
 
+  #need to separate age from other disaggregates
+
+  # keep ages in in main dataset, but remove population type
+  VMMC_AE_age<- SC_ARVDISP %>%
+    mutate(otherdisaggregate=ifelse(!is.na(age)| !is.na(sex), NA, otherdisaggregate))
+  #obs 9497
+
+  #keep population in subset, clean out age/sex
+  VMMC_AE_type<- SC_ARVDISP %>%
+    filter(indicator==c("VMMC_AE") & !is.na(otherdisaggregate)) %>%
+    mutate(age=ifelse(!is.na(otherdisaggregate), NA, age),
+           sex=ifelse(!is.na(otherdisaggregate), NA, sex))
+
+  #combine: row bind
+  VMMC_AE<-rbind(VMMC_AE_age, VMMC_AE_type)
 
 
-
-
-
-
-
-
-
-
-
-
-
-  ####################################################################
-  #                        RECODE PERIOD
-  ####################################################################
-  mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
-                                "FY21 Q1",
-                                ifelse(period>="2021-01-01" & period<="2021-03-31",
-                                       "FY21 Q2",
-                                       ifelse(period>="2021-04-01" & period<="2021-06-30",
-                                              "FY21 Q3",
-                                              ifelse(period>="2021-07-01" & period<="2021-09-30",
-                                                     "FY21 Q4",
-                                                     # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
-                                                     #              "FY21 Q1 - Q2",
-                                                     # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
-                                                     #             "FY21 Q3 - Q4",
-                                                     NA))))) %>%
-    view
-
-
-
-  # date <- df %>%
-  #   clean_names() %>%
-  #   mutate(reportingperiod=ifelse(period %in% "2020-10-01":"2020-12-31",
-  #                                 "FY21 Q1",
-  #                                 ifelse(period %in% "2021-01-01":"2021-03-31",
-  #                                        "FY21 Q2",
-  #                                        ifelse(period %in% "2021-04-01":"2021-06-30",
-  #                                               "FY21 Q3",
-  #                                               ifelse(period %in% "2021-07-01":"2021-09-30",
-  #                                                      "FY21 Q4",
-  #                                                      NA))))) %>%
-  #   view
-
-  ####################################################################
-  #                        RECODE NUMDENOM
-  ####################################################################
-
-  #Numerator -> n/N, Denominator -> d/D
 
 
 
