@@ -1,4 +1,4 @@
-#240-280 unfinished, period and numdenom
+#line 260: period code with multiple attempts/errors
 
 source("Scripts/00_setup.R")
 
@@ -10,20 +10,25 @@ df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
                           origin = "1900-01-01"),
          result_value = as.integer(result_value))
 
+
+
+
+
 #view(df)
 glimpse(df)
 names(df)
-
-df %>%
-  distinct(indicator) %>%
-  pull()
-
-
-df %>% distinct(indicator)
-
-  df %>% distinct(population_type)
-
-  df %>% distinct(other_disaggregate) %>% pull()
+#
+# df %>%
+#   distinct(indicator) %>%
+#   pull()
+#
+# df %>% distinct(indicator)
+#
+#   df %>% distinct(population_type)
+#
+#   df %>% distinct(other_disaggregate) %>% pull()
+#
+#   df6 %>% distinct(partner)
 
 
 
@@ -32,37 +37,44 @@ df %>% distinct(indicator)
   #                       FORMAT DATA
   ####################################################################
 
-   #add columns for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
+##### Bring in MSD to give orgunituids
+
+msd<-read_msd("C:/Users/jstephens/Documents/MSD/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
+msd_psnu<-msd %>%
+  select(c("psnu", "psnuuid")) %>%
+  distinct()
+#add columns for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
   df2 <- df %>%
     mutate(operatingunit = "Zimbabwe",
-           orgunit = NA,
-           orgunitid = NA)
+           orgunit = psnu)
+#add orgunitud for zim psnu's by zim msd'
+df2_join<-df2 %>%
+  left_join(msd_psnu,  by = c("psnu"="psnu"), `copy` = TRUE) %>%
+  rename(orgunituid=psnuuid)
+
 
   #df2 %>% view
 
   #check clean names and new columns
-  test <- df2 %>%
-    filter(indicator == c("TX_PVLS_ELIGIBLE"))
-
-  #test %>% view
-
-  test <- df2 %>%
-    subset(!is.na(other_disaggregate))
-
-  #test %>% view
-
-  test <- df2 %>%
-    subset(!is.na(population_type))
-
-  test %>%
-    view
-
-  df2 %>%
-    group_by(population_type) %>%
-    skim
-
-  #where are the other population types seen in the excel file???
-
+  # test <- df2 %>%
+  #   filter(indicator == c("TX_PVLS_ELIGIBLE"))
+  #
+  # #test %>% view
+  #
+  # test <- df2 %>%
+  #   subset(!is.na(other_disaggregate))
+  #
+  # #test %>% view
+  #
+  # test <- df2 %>%
+  #   subset(!is.na(population_type))
+  #
+  # test %>%
+  #   view
+  #
+  # df2 %>%
+  #   group_by(population_type) %>%
+  #   skim
 
 
   df3 <- df2 %>%
@@ -83,14 +95,12 @@ df %>% distinct(indicator)
     select(!c(annual_target_value,
               starts_with("required")))
 
-  df3 %>%
-    distinct(indicator) %>%
-    pull()
-
-
-  test <- df3 %>%
-    filter(indicator %in% c("TX_PVLS_ELIGIBLE")) %>%
-    view
+  # df3 %>%
+  #   distinct(indicator) %>%
+  #   pull()
+  # test <- df3 %>%
+  #   filter(indicator %in% c("TX_PVLS_ELIGIBLE")) %>%
+  #   view
 
   ####################################################################
   #                        OVC from PVLS
@@ -106,8 +116,7 @@ df %>% distinct(indicator)
       indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
       indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
       TRUE ~ indicator
-    )) %>%
-    view
+    ))
 
   ##confirm recoding worked
   # test <- df3 %>%
@@ -133,10 +142,9 @@ df %>% distinct(indicator)
   ####################################################################
 
   df5 <- df4 %>%
-       #add numerator to all DREAMS_FP/DREAMS_GEND_NORM, Zim not reporting Denom
-      mutate(numdenom = ifelse(indicator == "DREAMS_FP" | indicator=="DREAMS_GEND_NORM", "N", NA),
-        # recode numdenom to N/D
-         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator", "N",
+    mutate(
+       #add numerator to all missing numerator, recode numdenom to N/D
+         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator"|is.na(numdenom), "N",
                   ifelse(numdenom=="Denominator" | numdenom=="denominator", "D", numdenom)),
         # Remove population of "Non-KP (general population)" for most indicator (only in PrEP - but not 1 mo & VERIFY vars)
        population = case_when(
@@ -154,8 +162,7 @@ df %>% distinct(indicator)
 
 
 
-
-##test for rrecoding worked
+##test for recoding worked
   # test <- df4 %>%
   #    filter(indicator %in% c("OVC_VLR") & population %in% c("OVC")) %>%
   #   view
@@ -189,10 +196,10 @@ df %>% distinct(indicator)
 
 
   #issues in  age
-  df5  %>%
-    # filter(indicator==c("OVC_ENROLL")) %>%
-    distinct(age) %>%
-    pull()
+  # df5  %>%
+  #   # filter(indicator==c("OVC_ENROLL")) %>%
+  #   distinct(age) %>%
+  #   pull()
   # [1] "Infant Age: 2-12mo" "Infant Age: <=2mo"  "10-14"              "15-19"              "20-24"              "25-29"
   # [7] "30-34"              "35-39"              "40-44"              "45-49"              "5-9"                "50+"
   # [13] "<1"                 "1-4"                "20/24"              NA                   "15-17"              "18+ caregiver"
@@ -204,11 +211,16 @@ df %>% distinct(indicator)
   # "OVC: 18-20"         "OVC: 18+ caregiver"    "18+ caregiver"
 
 
-  #drop from the string anything after (
   df6 <- df5 %>%
+      #drop from the string anything after "(" to remove (specific) & (inclusive)
     mutate(age= gsub("\\(.*","",age)%>%
              str_trim(side = "both")) %>%
-    ## might have to do something to disaggs or pops when removing ovc or caregiver from age?
+    ##recode disaggs when removing ovc or caregiver from age
+    mutate(otherdisaggregate=case_when(
+      age=="OVC: 18+ caregiver"|age=="18+ caregiver" ~"Caregiver",
+      age=="OVC:18-20"~"OVC",
+      TRUE~otherdisaggregate)) %>%
+    #drop characters from age (ovc specific age groups)
     mutate(age= gsub("OVC","",age)%>%
              str_trim(side = "both")) %>%
     mutate(age= gsub("caregiver","",age)%>%
@@ -225,6 +237,7 @@ df %>% distinct(indicator)
       age=="20/24"~"20-24",
       age=="25 - 29"~"25-29",
       age=="30 - 34"~"30-34",
+      age=="30-36"~"30-34",
       age=="35 - 39"~"35-39",
       age=="40 - 44"~"40-44",
       age=="45 - 49"~"45-49",
@@ -236,9 +249,9 @@ df %>% distinct(indicator)
 
 
   ## check recode
-  df6 %>%
-    distinct(age) %>%
-    pull()
+  # df6 %>%
+  #   distinct(age) %>%
+  #   pull()
 
 
   ############################################################################################################
@@ -247,42 +260,76 @@ df %>% distinct(indicator)
   ####################################################################
   #                        RECODE PERIOD
   ####################################################################
-  # mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
-  #                               "FY21 Q1",
-  #                               ifelse(period>="2021-01-01" & period<="2021-03-31",
-  #                                      "FY21 Q2",
-  #                                      ifelse(period>="2021-04-01" & period<="2021-06-30",
-  #                                             "FY21 Q3",
-  #                                             ifelse(period>="2021-07-01" & period<="2021-09-30",
-  #                                                    "FY21 Q4",
-  #                                                    # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
-  #                                                    #              "FY21 Q1 - Q2",
-  #                                                    # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
-  #                                                    #             "FY21 Q3 - Q4",
-  #                                                    NA))))) %>%
-  #   view
-  #
+
+  # check periods
+  df6 %>%
+    distinct(period) %>%
+    pull()
+
+glimpse(df6)
+
+# library(lubridate)
+
+#need to also recode the ovc indicators to semi-annual periods
+#previous version of code created "indicatortype" but that has been removed
+#how to recode ovc periods without creating indicator type?
+
+date <- df6 %>%
+  mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
+                                "FY21 Q1",
+              ifelse(period>="2021-01-01" & period<="2021-03-31",
+                                "FY21 Q2",
+               ifelse(period>="2021-04-01" & period<="2021-06-30",
+                                 "FY21 Q3",
+               ifelse(period>="2021-07-01" & period<="2021-09-30",
+                                 "FY21 Q4",
+               # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
+              #              "FY21 Q1 - Q2",
+                # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
+                 #             "FY21 Q3 - Q4",
+                                                     NA))))) %>%
+    view
 
 
-  # date <- df %>%
-  #   clean_names() %>%
-  #   mutate(reportingperiod=ifelse(period %in% "2020-10-01":"2020-12-31",
-  #                                 "FY21 Q1",
-  #                                 ifelse(period %in% "2021-01-01":"2021-03-31",
-  #                                        "FY21 Q2",
-  #                                        ifelse(period %in% "2021-04-01":"2021-06-30",
-  #                                               "FY21 Q3",
-  #                                               ifelse(period %in% "2021-07-01":"2021-09-30",
-  #                                                      "FY21 Q4",
-  #                                                      NA))))) %>%
-  #   view
+date <- df6 %>%
+  mutate(reportingperiod=case_when(
+    (period>="2020-10-01" & period<="2020-12-31")~"FY21 Q1",
+    (period>="2021-01-01" & period<="2021-03-31")~"FY21 Q2",
+    (period>="2021-04-01" & period<="2021-06-30")~"FY21 Q3",
+    (period>="2021-07-01" & period<="2021-09-30")~"FY21 Q4",   TRUE~period))
+rowwise() %>%
+  select(indicator=contains("OVC")) %>%
+  mutate(reportingperiod=case_when(
+    (period>="2020-10-01" & period<="2021-03-31")~"FY21 Q1 - Q2"
+    (period>="2021-04-01" & period<="2021-09-30")~"FY21 Q3 - Q4",
+    TRUE~period))
+  ungroup()
 
 
+date <- df6 %>%
+  mutate(reportingperiod=case_when(
+    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
+    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
+    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
+    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
+             TRUE~ period))
 
-  ####################################################################
-  #                        RECODE PERIOD
-  ####################################################################
+date <- df6 %>%
+  mutate(reportingperiod=case_when(
+    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
+    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
+    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
+    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
+    TRUE~ period))
 
+
+date <- df6 %>%
+  mutate(reportingperiod=case_when(
+    between(period,"2020-10-01","2020-12-31")~"FY21 Q1",
+    between(period, "2021-01-01","2021-03-31")~"FY21 Q2",
+    between(period, "2021-04-01","2021-06-30")~"FY21 Q3",
+    between(period, "2021-07-01","2021-09-30")~ "FY21 Q4",
+    TRUE~ NA_character_))
 
 
   ############################################################################################################
@@ -313,12 +360,9 @@ df %>% distinct(indicator)
 
   #keep age/sex in main dataset but remove the other diaggregate
   Dreams_agesex<- df6 %>%
-    # subset(indicator==c("DREAMS_FP")) %>% #use subset to check work
     mutate(otherdisaggregate=ifelse(!is.na(age) & indicator=="DREAMS_FP", NA, otherdisaggregate)) %>%
     view
   #9142 obs
-
-
 
 
   #create subset of just the other disaggregates for dreams in order to add to main dataset with age/sex
@@ -457,8 +501,17 @@ df %>% distinct(indicator)
     (indicator=="OVC_OFFER" | indicator=="OVC_ENROLL") ~ "OVC or Caregiver: OVC",
     TRUE~ otherdisaggregate),
     population=case_when((indicator=="OVC_OFFER" | indicator=="OVC_ENROLL")~NA_character_,
-    TRUE~population) )
+    TRUE~population))
 
+  #   # OVC_ENROLL (d) = OVC_OFFER (n)
+  #need to create a subest of the OVC_OFFER to duplicate as OVC_ENROLL D and add back to dataset
+   OVC_ENROLL_OFFER_D<-OVC_ENROLL_OFFER %>%
+    subset(indicator==c("OVC_OFFER")) %>%
+    mutate(indicator=="OVC_ENROLL",numdenom=="D")
+
+   OVC_ENROLL_OFFER<-rbind(OVC_ENROLL_OFFER, OVC_ENROLL_OFFER_D)
+
+  * OVC_OFFER-> may need to bring in TX_CURR<20 (age/sex disagg) for denominator
 
   ####################################################################
   #                       OVC_VL_ELIGIBLE
@@ -689,6 +742,10 @@ df %>% distinct(indicator)
   #   pull()
   # # [1] "15-17" "5-9"   "18+"   "10-14" "1-4"   "18-20" "<1"
   #
+  df6 %>%
+    filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+    distinct(age) %>%
+    pull()
 
 
 
