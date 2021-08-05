@@ -39,7 +39,10 @@ names(df)
 
 ##### Bring in MSD to give orgunituids
 
-msd<-read_msd("C:/Users/jstephens/Documents/MSD/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
+#msd<-read_msd("C:/Users/jstephens/Documents/MSD/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
+
+msd<-read_msd("Data/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
+
 msd_psnu<-msd %>%
   select(c("psnu", "psnuuid")) %>%
   distinct()
@@ -262,11 +265,11 @@ df2_join<-df2 %>%
   ####################################################################
 
   # check periods
-  df6 %>%
+  df %>%
     distinct(period) %>%
     pull()
 
-glimpse(df6)
+glimpse(df)
 
 # library(lubridate)
 
@@ -274,62 +277,71 @@ glimpse(df6)
 #previous version of code created "indicatortype" but that has been removed
 #how to recode ovc periods without creating indicator type?
 
-date <- df6 %>%
-  mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
-                                "FY21 Q1",
-              ifelse(period>="2021-01-01" & period<="2021-03-31",
-                                "FY21 Q2",
-               ifelse(period>="2021-04-01" & period<="2021-06-30",
-                                 "FY21 Q3",
-               ifelse(period>="2021-07-01" & period<="2021-09-30",
-                                 "FY21 Q4",
-               # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
-              #              "FY21 Q1 - Q2",
-                # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
-                 #             "FY21 Q3 - Q4",
-                                                     NA))))) %>%
-    view
+date <- df %>%
+  mutate(reportingperiod = quarter(period, with_year = TRUE, fiscal_start = 10)) %>%
+  separate(reportingperiod, into = c("fiscal_year", "rep_period"), sep = "[.]") %>%
+  mutate(rep_period = case_when(
+    str_detect(indicator, "OVC") & rep_period == 2 ~ paste0("FY", str_sub(fiscal_year, 3, 4), " Q1 - Q", rep_period),
+    str_detect(indicator, "OVC") & rep_period == 4 ~ paste0("FY", str_sub(fiscal_year, 3, 4), " Q3 - Q", rep_period),
+   TRUE ~ paste0("FY", str_sub(fiscal_year, 3, 4), " Q", rep_period))
+  )
+
+ # mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
+ #                                "FY21 Q1",
+ #              ifelse(period>="2021-01-01" & period<="2021-03-31",
+ #                                "FY21 Q2",
+ #               ifelse(period>="2021-04-01" & period<="2021-06-30",
+ #                                 "FY21 Q3",
+ #               ifelse(period>="2021-07-01" & period<="2021-09-30",
+ #                                 "FY21 Q4",
+ #               # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
+ #              #              "FY21 Q1 - Q2",
+ #                # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
+ #                 #             "FY21 Q3 - Q4",
+ #                                                     NA))))) %>%
+ #    view
 
 
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    (period>="2020-10-01" & period<="2020-12-31")~"FY21 Q1",
-    (period>="2021-01-01" & period<="2021-03-31")~"FY21 Q2",
-    (period>="2021-04-01" & period<="2021-06-30")~"FY21 Q3",
-    (period>="2021-07-01" & period<="2021-09-30")~"FY21 Q4",   TRUE~period))
-rowwise() %>%
-  select(indicator=contains("OVC")) %>%
-  mutate(reportingperiod=case_when(
-    (period>="2020-10-01" & period<="2021-03-31")~"FY21 Q1 - Q2"
-    (period>="2021-04-01" & period<="2021-09-30")~"FY21 Q3 - Q4",
-    TRUE~period))
-  ungroup()
+# date <- df6 %>%
+#   mutate(reportingperiod=case_when(
+#     (period>="2020-10-01" & period<="2020-12-31")~"FY21 Q1",
+#     (period>="2021-01-01" & period<="2021-03-31")~"FY21 Q2",
+#     (period>="2021-04-01" & period<="2021-06-30")~"FY21 Q3",
+#     (period>="2021-07-01" & period<="2021-09-30")~"FY21 Q4",   TRUE~period))
+#
+# rowwise() %>%
+#   select(indicator=contains("OVC")) %>%
+#   mutate(reportingperiod=case_when(
+#     (period>="2020-10-01" & period<="2021-03-31")~"FY21 Q1 - Q2"
+#     (period>="2021-04-01" & period<="2021-09-30")~"FY21 Q3 - Q4",
+#     TRUE~period))
+#   ungroup()
 
 
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-             TRUE~ period))
+# date <- df6 %>%
+#   mutate(reportingperiod=case_when(
+#     period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
+#     period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
+#     period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
+#     period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
+#              TRUE~ period))
+#
+# date <- df6 %>%
+#   mutate(reportingperiod=case_when(
+#     period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
+#     period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
+#     period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
+#     period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
+#     TRUE~ period))
 
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-    TRUE~ period))
 
-
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    between(period,"2020-10-01","2020-12-31")~"FY21 Q1",
-    between(period, "2021-01-01","2021-03-31")~"FY21 Q2",
-    between(period, "2021-04-01","2021-06-30")~"FY21 Q3",
-    between(period, "2021-07-01","2021-09-30")~ "FY21 Q4",
-    TRUE~ NA_character_))
+# date <- df6 %>%
+#   mutate(reportingperiod=case_when(
+#     between(period,"2020-10-01","2020-12-31")~"FY21 Q1",
+#     between(period, "2021-01-01","2021-03-31")~"FY21 Q2",
+#     between(period, "2021-04-01","2021-06-30")~"FY21 Q3",
+#     between(period, "2021-07-01","2021-09-30")~ "FY21 Q4",
+#     TRUE~ NA_character_))
 
 
   ############################################################################################################
