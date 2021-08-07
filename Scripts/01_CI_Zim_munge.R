@@ -55,21 +55,34 @@ df_5 <- read_xlsx(path = "OPHID_Custom_Indicator_FY21Q3_report_16_07_2021_v2.xls
                           origin = "1900-01-01"),
          result_value = as.integer(result_value))
 
+df <- bind_rows(df_1,df_2,df_3,df_4, df_5, .id = "id")
+write_tsv(df, "FY21Q3_Zimbabwe_CI_submissions_dirty", na = " ") #use to create pivots for QC
+
 
 
 #consider loading via api? https://drive.google.com/drive/folders/1wyak7m6fNWeFfF5NOH7jkimSemNGo4x4
-# file.list <- list.files(pattern='*.xlsx')
-# df.list <- lapply(file.list, function(x) read_xlsx(
-#             path="./Data/CIRG FY21 Q3",
-#             sheet = "Data",
-#             col_types = "text")) %>%
-#   janitor::clean_names() %>%
-#   mutate(period = as.Date(as.integer(period),
-#                           origin = "1900-01-01"),
-#          result_value = as.integer(result_value))
-#
-# df <- bind_rows(df.list, .id = "id")
+setwd("./Data/CIRG FY21 Q3")
 
+file.list <- list.files(path = ".",pattern='*.xlsx', full.names = TRUE)
+
+df.list<- file.list %>%
+  map_dfr(function(file){
+  print(file)
+    sheet=if_else(str_detect(file, "Master custom report template_FY21Q3 PSI Final_June"),"June_Data", "Data")
+    df=read_xlsx(path=file,
+   sheet = sheet,
+   col_types = "text") %>%
+  janitor::clean_names() %>%
+  mutate(period = as.Date(as.integer(period),
+                          origin = "1900-01-01"),
+         result_value = as.integer(result_value))
+ return(df)
+   })
+
+glimpse(df.list)
+
+#2021-07-01
+#map_dfr loops through each file, return combines the dataset in the most recent loop to the last
 
 #view(df)
 glimpse(df)
@@ -108,6 +121,7 @@ msd_psnu<-msd %>%
 df2_join<-df2 %>%
   left_join(msd_psnu,  by = c("psnu"="psnu"), `copy` = TRUE) %>%
   rename(orgunituid=psnuuid)
+glimpse(df2_join)
 
 
   #df2 %>% view
@@ -134,7 +148,7 @@ df2_join<-df2 %>%
   #   skim
 
 
-  df3 <- df2 %>%
+  df3 <- df2_join %>%
     #pull only the CIGB indicators, none of Zim CI
     #If Zim changes indicators (ie OVC) or collects new indicators this will need to be updated
     filter(indicator %in% c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "TX_NEW_VERIFY", "TX_CURR_VERIFY", "TX_PVLS_ELIGIBLE", "TX_PVLS_VERIFY",
@@ -149,9 +163,10 @@ df2_join<-df2 %>%
            otherdisaggregate = other_disaggregate,
            val = result_value) %>%
     #keep only the CIGB template variables (drop 5)
-    select(!c(annual_target_value,
-              starts_with("required")))
-
+    select(!c(annual_target_value,id,
+              starts_with("required"),
+              starts_with("x")))
+glimpse(df3)
   # df3 %>%
   #   distinct(indicator) %>%
   #   pull()
@@ -160,40 +175,40 @@ df2_join<-df2 %>%
   #   view
 
   ####################################################################
-  #                        OVC from PVLS
+  #                        OVC from PVLS - only q2/q4
   ####################################################################
 
   # TX_PVLS_ELIGIBLE ->                OVC_VL_ELIGIBLE
   # TX_PVLS_RESULT_DOCUMENTED ->       OVC_VLR
   # TX_PVLS_VERIFY ->                  OVC_VLS
 
- df4<- df3 %>%
-    mutate(indicator = case_when(
-      indicator == "TX_PVLS_ELIGIBLE" & population == "OVC" ~ "OVC_VL_ELIGIBLE",
-      indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
-      indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
-      TRUE ~ indicator
-    ))
+ # df4<- df3 %>%
+ #    mutate(indicator = case_when(
+ #      indicator == "TX_PVLS_ELIGIBLE" & population == "OVC" ~ "OVC_VL_ELIGIBLE",
+ #      indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
+ #      indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
+ #      TRUE ~ indicator
+ #    ))
+ #
+ #  #confirm recoding worked
+ #  test <- df3 %>%
+ #     filter(indicator %in% c("TX_PVLS_ELIGIBLE") & population %in% c("OVC")) %>%
+ #    view
+ #  #count=314
+ #  test <- df4 %>%
+ #    filter(indicator %in% c("OVC_VL_ELIGIBLE")) %>%
+ #    view
+ #  #count 314
+ #
+ #  df4 %>%
+ #    distinct(indicator) %>%
+ #    pull()
+ #  df5 %>%
+ #           filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+ #          distinct(population) %>%
+ #         pull()
 
-  ##confirm recoding worked
-  # test <- df3 %>%
-  #    filter(indicator %in% c("TX_PVLS_ELIGIBLE") & population %in% c("OVC")) %>%
-  #   view
-  # #count=314
-  # test <- df4 %>%
-  #   filter(indicator %in% c("OVC_VL_ELIGIBLE")) %>%
-  #   view
-  # #count 314
-  #
-  # df4 %>%
-  #   distinct(indicator) %>%
-  #   pull()
-  # df5 %>%
-  #          filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
-  #         distinct(population) %>%
-  #        pull()
-
-
+df4<-df3
   ####################################################################
   #                        CLEANING/MUTATES ACROSS INDICATORS
   ####################################################################
@@ -233,22 +248,22 @@ df2_join<-df2 %>%
   #   view
   ## count 168
 
-  # df4 %>%
-  #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
-  #   distinct(population) %>%
-  #   pull()
+# df4 %>%
+#   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+#   distinct(population) %>%
+#   pull()
 # #[1] NA                                "Female sex workers (FSW)"        "Men who have sex with men (MSM)" "Transgender people (TG)"         "Non-KP (general population)
-  # df5 %>%
-  #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
-  #   distinct(population) %>%
-  #   pull()
-# NA
-  # df4 %>%
-  #   distinct(sex) %>%
-  #   pull()
-  # df5 %>%
-  #   distinct(sex) %>%
-  #   pull()
+# df5 %>%
+#   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+#   distinct(population) %>%
+#   pull()
+# #NA
+# df4 %>%
+#   distinct(sex) %>%
+#   pull()
+# df5 %>%
+#   distinct(sex) %>%
+#   pull()
 
 
 
@@ -855,6 +870,11 @@ date <- df6 %>%
   VMMC_AE<-rbind(VMMC_AE_age, VMMC_AE_type)
 
 
+  ####################################################################
+  #                       EXPORT DATA AS EXCEL FILE
+  ####################################################################
 
+
+  write_tsv(VMMC_AE, "FY21Q3_Zimbabwe_CI_clean", na = " ")
 
 
