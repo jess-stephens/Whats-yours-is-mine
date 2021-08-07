@@ -1,74 +1,14 @@
-#line 316: period code with multiple attempts/errors
-
 source("Scripts/00_setup.R")
-setwd("./Data/CIRG FY21 Q3")
-getwd()
+
 
 # data from Q2
-# df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
-#                 sheet = "Data",
-#                 col_types = "text") %>%
-#   janitor::clean_names() %>%
-#   mutate(period = as.Date(as.integer(period),
-#                           origin = "1900-01-01"),
-#          result_value = as.integer(result_value))
-
-
-#data for Q3 - line 60 attempt/errors to read in together
-df_1 <- read_xlsx(path = "FHI360_ Master Custom Report FY21Q3_20.July.2021.xlsx",
+df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
                 sheet = "Data",
                 col_types = "text") %>%
   janitor::clean_names() %>%
   mutate(period = as.Date(as.integer(period),
                           origin = "1900-01-01"),
          result_value = as.integer(result_value))
-
-df_2 <- read_xlsx(path = "GHSC-PSM Master custom report_FY21Q3.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_3 <- read_xlsx(path = "Master custom report template_CeSHHAR_FY21Q3.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_4 <- read_xlsx(path = "Master custom report template_FY21Q3 PSI Final_June.xlsx",
-                  sheet = "June_Data",
-                  col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_5 <- read_xlsx(path = "OPHID_Custom_Indicator_FY21Q3_report_16_07_2021_v2.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-
-
-#consider loading via api? https://drive.google.com/drive/folders/1wyak7m6fNWeFfF5NOH7jkimSemNGo4x4
-# file.list <- list.files(pattern='*.xlsx')
-# df.list <- lapply(file.list, function(x) read_xlsx(
-#             path="./Data/CIRG FY21 Q3",
-#             sheet = "Data",
-#             col_types = "text")) %>%
-#   janitor::clean_names() %>%
-#   mutate(period = as.Date(as.integer(period),
-#                           origin = "1900-01-01"),
-#          result_value = as.integer(result_value))
-#
-# df <- bind_rows(df.list, .id = "id")
 
 
 #view(df)
@@ -334,7 +274,7 @@ glimpse(df)
 #previous version of code created "indicatortype" but that has been removed
 #how to recode ovc periods without creating indicator type?
 
-date <- df %>%
+date <- df6 %>%
   mutate(reportingperiod = quarter(period, with_year = TRUE, fiscal_start = 10)) %>%
   separate(reportingperiod, into = c("fiscal_year", "rep_period"), sep = "[.]") %>%
   mutate(rep_period = case_when(
@@ -343,77 +283,7 @@ date <- df %>%
    TRUE ~ paste0("FY", str_sub(fiscal_year, 3, 4), " Q", rep_period))
   )
 
- # mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
- #                                "FY21 Q1",
- #              ifelse(period>="2021-01-01" & period<="2021-03-31",
- #                                "FY21 Q2",
- #               ifelse(period>="2021-04-01" & period<="2021-06-30",
- #                                 "FY21 Q3",
- #               ifelse(period>="2021-07-01" & period<="2021-09-30",
- #                                 "FY21 Q4",
- #               # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
- #              #              "FY21 Q1 - Q2",
- #                # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
- #                 #             "FY21 Q3 - Q4",
- #                                                     NA))))) %>%
- #    view
-
-
-# date <- df6 %>%
-#   mutate(reportingperiod=case_when(
-#     (period>="2020-10-01" & period<="2020-12-31")~"FY21 Q1",
-#     (period>="2021-01-01" & period<="2021-03-31")~"FY21 Q2",
-#     (period>="2021-04-01" & period<="2021-06-30")~"FY21 Q3",
-#     (period>="2021-07-01" & period<="2021-09-30")~"FY21 Q4",   TRUE~period))
-#
-# rowwise() %>%
-#   select(indicator=contains("OVC")) %>%
-#   mutate(reportingperiod=case_when(
-#     (period>="2020-10-01" & period<="2021-03-31")~"FY21 Q1 - Q2"
-#     (period>="2021-04-01" & period<="2021-09-30")~"FY21 Q3 - Q4",
-#     TRUE~period))
-#   ungroup()
-
-
-# date <- df6 %>%
-#   mutate(reportingperiod=case_when(
-#     period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-#     period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-#     period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-#     period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-#              TRUE~ period))
-#
-# date <- df6 %>%
-#   mutate(reportingperiod=case_when(
-#     period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-#     period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-#     period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-#     period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-#     TRUE~ period))
-
-
-# date <- df6 %>%
-#   mutate(reportingperiod=case_when(
-#     between(period,"2020-10-01","2020-12-31")~"FY21 Q1",
-#     between(period, "2021-01-01","2021-03-31")~"FY21 Q2",
-#     between(period, "2021-04-01","2021-06-30")~"FY21 Q3",
-#     between(period, "2021-07-01","2021-09-30")~ "FY21 Q4",
-#     TRUE~ NA_character_))
-
-
   ############################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
