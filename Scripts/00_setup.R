@@ -19,7 +19,7 @@ library(here)
 #install.packages("skimr")   # BK: plz comment this out
 library(skimr)
 library(janitor)
-library(lubridate)           # BK: you will need this for dates
+library(lubridate)
 
 
 #setwd("C:/Users/jStephens/Documents/Zim/Whats-yours-is-mine") # BK: you don't need this if your report is an R Project
