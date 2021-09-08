@@ -242,6 +242,7 @@ df4<- df3 %>%
   #   pull()
 
 
+
   ############################################################################################################
 
 
@@ -337,15 +338,16 @@ date %>%
   #combine: row bind
   Dreams_Gend_Norm<-rbind(Dreams_Gend_agesex, Dreams_Gend_disagg)
 
-
   ####################################################################
   #                        GEND_GBV
   ####################################################################
 
-  # Dreams_Gend_Norm %>%
-  #   filter(indicator==c("GEND_GBV")) %>%
-  #   distinct(population) %>%
-  #   pull()
+  Dreams_Gend_Norm %>%
+    filter(indicator==c("GEND_GBV")) %>%
+    # distinct(population) %>%
+    view()
+    # pull()
+
   # # [1] NA    "OVC"  -> only NA is allowable, recoded OVC to NA <- not relevant in Q3
   #
   # #check if any otherdisaggs need to be recoded
@@ -513,6 +515,7 @@ date %>%
   # [4] "Transgender people (TG)"         "Non-KP (general population)"
 
 
+
   ####################################################################
   #                       PREP_SCREEN
   ####################################################################
@@ -540,6 +543,14 @@ date %>%
   #combine: row bind
   PrEP_SCREEN<-rbind(PrEP_SCREEN_type, PrEP_SCREEN_age)
 
+  PrEP_SCREEN<- PrEP_SCREEN %>%
+    mutate(age=case_when((indicator %in% c("PrEP_SCREEN", "PrEP_ELIGIBLE")) & is.na(age)~"unknown",
+                         TRUE~age))
+
+  # PrEP_SCREEN %>%
+  #   filter(indicator %in% c("PrEP_SCREEN", "PrEP_ELIGIBLE") ) %>%
+  #   distinct(age) %>%
+  #   pull()
 
 
   ####################################################################
@@ -565,6 +576,7 @@ date %>%
   #   filter(indicator==c("SC_ARVDISP")) %>%
   #   distinct(otherdisaggregate) %>%
   #   pull()
+
 
 
   ####################################################################
@@ -604,8 +616,16 @@ date %>%
       (indicator=="TX_RTT_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
       (indicator=="TX_ML_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
       (indicator=="TX_PVLS_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
-      TRUE~ otherdisaggregate) )
-
+      TRUE~ otherdisaggregate),
+      age=case_when(
+        (indicator %in% c("TX_CURR_VERIFY","TX_NEW_VERIFY","TX_RTT_VERIFY","TX_ML_VERIFY", "TX_PVLS_VERIFY")
+        & age %in% c("<1", "1-4", "5-9", "10-14", "15-19")) ~"<20",
+        TRUE~age)
+      )
+  VERIFY %>%
+    filter(indicator %in% c("TX_NEW_VERIFY") ) %>%
+    distinct(age) %>%
+    pull()
 
   ####################################################################
   #                       TX_CURR_VERIFY
@@ -726,39 +746,66 @@ date %>%
     #                       VMMC_AE
     ####################################################################
 
+
   #need to separate age from other disaggregates
 
   # keep ages in in main dataset, but remove population type
   VMMC_AE_age<- TX_PVLS_ELIGIBLE %>%
-    mutate(otherdisaggregate=ifelse(!is.na(age)| !is.na(sex), NA, otherdisaggregate))
+    mutate(otherdisaggregate=ifelse(!is.na(age)& indicator=="VMMC_AE"| !is.na(sex) & indicator=="VMMC_AE", NA, otherdisaggregate))
   #obs 9497
 
   #keep population in subset, clean out age/sex
   VMMC_AE_type<- TX_PVLS_ELIGIBLE %>%
     filter(indicator==c("VMMC_AE") & !is.na(otherdisaggregate)) %>%
-    mutate(age=ifelse(!is.na(otherdisaggregate), NA, age),
-           sex=ifelse(!is.na(otherdisaggregate), NA, sex))
+    mutate(age=ifelse(!is.na(otherdisaggregate), NA, age))
+           # sex=ifelse(!is.na(otherdisaggregate), NA, sex)
 
   #combine: row bind
   VMMC_AE<-rbind(VMMC_AE_age, VMMC_AE_type)
 
+  ####################################################################
+  #                       CHECK MECH_CODE
+  ####################################################################
 
+  VMMC_AE %>%
+     distinct(mech_code) %>%
+     pull()
+
+  #Recode as numeric
+  mech_code<- VMMC_AE %>%
+    mutate(mech_code=case_when(partner=="Family Health International"~ "17578",
+                               partner== "Population Services International"~"70473",
+                               partner=="ORGANIZATION FOR PUBLIC HEALTH INTERVENTIONS AND DEVELOPMENT"~"82102",
+                               partner== "Centre for Sexual Health and HIV/AIDS Research Zimbabwe"~"85142",
+                               partner== "Chemonics International, Inc."~"18353",
+                               TRUE~mech_code),
+    mech_code=as.integer(mech_code))
+
+
+
+ # mech_code %>%
+ #   distinct(mech_code) %>%
+ #   pull()
+ #
+ # mech_code %>%
+ #   filter(is.na(mech_code)) %>%
+ #   view()
   ####################################################################
   #                       EXPORT DATA AS EXCEL FILE
   ####################################################################
 
-  VMMC_AE %>%
-    distinct(indicator) %>%
-    pull()
+  # mech_code %>%
+  #   distinct(indicator) %>%
+  #   pull()
 
-  # remove pmtct_eid_sample_documented
+  # remove pmtct_eid_sample_documented AND PrEP_1MONTH - will not load without disaggregates
 
- FINAL<- VMMC_AE %>%
-  filter(!indicator %in% c("PMTCT_EID_SAMPLE_DOCUMENTED") )
+ FINAL<- mech_code %>%
+  filter(!indicator %in% c("PMTCT_EID_SAMPLE_DOCUMENTED", "PrEP_1MONTH") )
 
  FINAL_q3<- FINAL %>%
    filter(reportingperiod %in% c("FY21 Q3") )
 
-  write_tsv(FINAL_q3, "FY21Q3_Zimbabwe_CI_clean_20210812_q3", na = " ")
+  write_tsv(FINAL_q3, "CIRG_FY21_Q3_Zimbabwe_20210908", na = " ")
 
 
