@@ -1,51 +1,14 @@
-#load library's
-source("Scripts/00_setup.R")
-
-#consider loading via api? Location of files on GDrive: https://drive.google.com/drive/folders/1wyak7m6fNWeFfF5NOH7jkimSemNGo4x4
-setwd("./Data/CIRG FY21 Q3")
-
-file.list <- list.files(path = ".",pattern='*.xlsx', full.names = TRUE)
-
-df.list<- file.list %>%
-  map_dfr(function(file){
-  print(file)
-    sheet=if_else(str_detect(file, "Master custom report template_FY21Q3 PSI Final_June"),"June_Data", "Data")
-    df=read_xlsx(path=file,
-   sheet = sheet,
-   col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
- return(df)
-   })
-#map_dfr loops through each file, return combines the dataset in the most recent loop to the last
-#could request zim to submit with the following ending to call in the most recent dataset 2021-07-01
-
-glimpse(df.list)
-
-write_tsv(df.list, "FY21Q3_Zimbabwe_CI_submissions_dirty", na = " ") #use to create pivots for QC
-
-
-
-#view(df.list)
-
 
   ####################################################################
   #                       FORMAT DATA
   ####################################################################
 
-##### Bring in MSD to give orgunituids (PSNU)
-
-msd<-read_msd("C:/Users/jstephens/Documents/MSD/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
-msd_psnu<-msd %>%
-  select(c("psnu", "psnuuid")) %>%
-  distinct()
 
 #add columns for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
   df2 <- df.list %>%
     mutate(operatingunit = "Zimbabwe",
            orgunit = psnu)
+
 #add orgunitud for zim psnu's by zim msd'
 df2_join<-df2 %>%
   left_join(msd_psnu,  by = c("psnu"="psnu"), `copy` = TRUE) %>%
@@ -63,11 +26,7 @@ glimpse(df2_join)
       TRUE~ indicator), ) %>%
     #pull only the CIGB indicators, none of Zim CI
     #If Zim changes indicators (ie OVC) or collects new indicators this will need to be updated
-    filter(indicator %in% c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "OVC_ENROLL", "OVC_OFFER",
-            "PMTCT_EID_ELIGIBLE",  "PMTCT_EID_SAMPLE_DOCUMENTED",
-           "PrEP_1MONTH", "PrEP_ELIGIBLE",  "PrEP_NEW_VERIFY", "PrEP_SCREEN",
-           "SC_ARVDISP","SC_CURR", "SC_LMIS", "TX_CURR_VERIFY", "TX_NEW_VERIFY",  "TX_PVLS_ELIGIBLE",
-           "TX_PVLS_RESULT_DOCUMENTED","TX_PVLS_SAMPLE","TX_PVLS_VERIFY","TX_RTT_VERIFY","VMMC_AE")) %>%
+    filter(indicator %in% c("TX_NEW_VERIFY")) %>%
     #name variables so the match CIGB template, expect for period which will occur when recoding period format
     rename(mech_code = mechanism_id,
            partner = partner_name,
@@ -82,9 +41,9 @@ glimpse(df2_join)
    select(c(period, orgunit, orgunituid, mech_code, partner, operatingunit, psnu, indicator, sex, age, population, otherdisaggregate,numdenom,val))
 glimpse(df3)
 
-  # df3 %>%
-  #   distinct(indicator) %>%
-  #   pull()
+# df3 %>%
+#   distinct(partner) %>%
+#   pull()
 
   ####################################################################
   #                        OVC from PVLS - only q2/q4
@@ -266,10 +225,9 @@ date <- df6 %>%
   relocate(reportingperiod, .before = period) %>%
   select(!c(period, fiscal_year))
 
-date %>%
-  distinct(reportingperiod) %>%
-  pull()
-
+# date %>%
+#   distinct(reportingperiod) %>%
+#   pull()
 
 
   ####################################################################
@@ -389,6 +347,7 @@ date %>%
   #   filter(indicator==c("GEND_GBV")) %>%
   #   distinct(otherdisaggregate) %>%
   #   pull()
+
 
 
   ####################################################################
@@ -609,23 +568,19 @@ date %>%
   ####################################################################
   #Recode Verify indicators to PEPFAR Reported Sites "Site Support Type: PEPFAR supported"
 
+   view(SC_ARVDISP)
+
   VERIFY<- SC_ARVDISP %>%
-    mutate(otherdisaggregate=case_when(
-      (indicator=="TX_CURR_VERIFY" & is.na(otherdisaggregate) ) ~  "Site Support Type: PEPFAR supported",
-      (indicator=="TX_NEW_VERIFY" & is.na(otherdisaggregate) )~  "Site Support Type: PEPFAR supported",
-      (indicator=="TX_RTT_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
-      (indicator=="TX_ML_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
-      (indicator=="TX_PVLS_VERIFY"& is.na(otherdisaggregate) )  ~  "Site Support Type: PEPFAR supported",
-      TRUE~ otherdisaggregate),
-      age=case_when(
-        (indicator %in% c("TX_CURR_VERIFY","TX_NEW_VERIFY","TX_RTT_VERIFY","TX_ML_VERIFY", "TX_PVLS_VERIFY")
-        & age %in% c("<1", "1-4", "5-9", "10-14", "15-19")) ~"<20",
-        TRUE~age)
-      )
+    mutate(otherdisaggregate=ifelse(is.na(otherdisaggregate), "Site Support Type: PEPFAR supported",otherdisaggregate),
+      age=case_when(( age %in% c("<1", "1-4", "5-9", "10-14", "15-19")) ~"<20",
+        TRUE~age      ))
+
   VERIFY %>%
-    filter(indicator %in% c("TX_NEW_VERIFY") ) %>%
+    # filter(indicator %in% c("TX_NEW_VERIFY") ) %>%
     distinct(age) %>%
     pull()
+
+
 
   ####################################################################
   #                       TX_CURR_VERIFY
@@ -783,10 +738,11 @@ date %>%
 
 
 
- # mech_code %>%
- #   distinct(mech_code) %>%
- #   pull()
- #
+ mech_code %>%
+   distinct(mech_code) %>%
+   pull()
+
+
  # mech_code %>%
  #   filter(is.na(mech_code)) %>%
  #   view()
@@ -800,12 +756,12 @@ date %>%
 
   # remove pmtct_eid_sample_documented AND PrEP_1MONTH - will not load without disaggregates
 
- FINAL<- mech_code %>%
-  filter(!indicator %in% c("PMTCT_EID_SAMPLE_DOCUMENTED", "PrEP_1MONTH") )
+ # FINAL<- mech_code %>%
+ #  filter(!indicator %in% c("PMTCT_EID_SAMPLE_DOCUMENTED", "PrEP_1MONTH") )
+ #
+ # FINAL_q3<- FINAL %>%
+ #   filter(reportingperiod %in% c("FY21 Q3") )
 
- FINAL_q3<- FINAL %>%
-   filter(reportingperiod %in% c("FY21 Q3") )
-
-  write_tsv(FINAL_q3, "CIRG_FY21_Q3_Zimbabwe_20210908", na = " ")
+  write_tsv(mech_code, "CIRG_FY21_Q2_Zimbabwe_20210908", na = " ")
 
 

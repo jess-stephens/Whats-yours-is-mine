@@ -1,5 +1,9 @@
 #load  librarys
 
+ setwd("C:/Users/jStephens/Documents/Zim/Whats-yours-is-mine")
+
+#si_setup()
+
 #install.packages("tidytext") # BK: plz comment this out after you've installed
 library(tidytext)
 #install.packages("scales")   # BK: plz comment this out
@@ -22,9 +26,6 @@ library(janitor)
 library(lubridate)
 
 
-#setwd("C:/Users/jStephens/Documents/Zim/Whats-yours-is-mine") # BK: you don't need this if your report is an R Project
-
-#si_setup()
 
 
 
