@@ -1,75 +1,22 @@
 #line 316: period code with multiple attempts/errors
 
 source("Scripts/00_setup.R")
-setwd("./Data/CIRG FY21 Q3")
-getwd()
-
-# data from Q2
-# df <- read_xlsx(path = "Data/Master custom report template_FY21Q2_results.xlsx",
-#                 sheet = "Data",
-#                 col_types = "text") %>%
-#   janitor::clean_names() %>%
-#   mutate(period = as.Date(as.integer(period),
-#                           origin = "1900-01-01"),
-#          result_value = as.integer(result_value))
-
-
-#data for Q3 - line 60 attempt/errors to read in together
-df_1 <- read_xlsx(path = "FHI360_ Master Custom Report FY21Q3_20.July.2021.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_2 <- read_xlsx(path = "GHSC-PSM Master custom report_FY21Q3.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_3 <- read_xlsx(path = "Master custom report template_CeSHHAR_FY21Q3.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_4 <- read_xlsx(path = "Master custom report template_FY21Q3 PSI Final_June.xlsx",
-                  sheet = "June_Data",
-                  col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df_5 <- read_xlsx(path = "OPHID_Custom_Indicator_FY21Q3_report_16_07_2021_v2.xlsx",
-                sheet = "Data",
-                col_types = "text") %>%
-  janitor::clean_names() %>%
-  mutate(period = as.Date(as.integer(period),
-                          origin = "1900-01-01"),
-         result_value = as.integer(result_value))
-
-df <- bind_rows(df_1,df_2,df_3,df_4, df_5, .id = "id")
-write_tsv(df, "FY21Q3_Zimbabwe_CI_submissions_dirty", na = " ") #use to create pivots for QC
-
 
 
 #consider loading via api? https://drive.google.com/drive/folders/1wyak7m6fNWeFfF5NOH7jkimSemNGo4x4
-setwd("./Data/CIRG FY21 Q3")
+setwd("./Data/CIRG FY21 Q4")
 
 file.list <- list.files(path = ".",pattern='*.xlsx', full.names = TRUE)
-
+# file.list
 df.list<- file.list %>%
   map_dfr(function(file){
   print(file)
-    sheet=if_else(str_detect(file, "Master custom report template_FY21Q3 PSI Final_June"),"June_Data", "Data")
-    df=read_xlsx(path=file,
+    sheet="Data"
+     # sheet=if_else(str_detect(file, "PSI_Master custom report template_FY21Q4 Final"),"July_Data ", "Data")
+     # sheet=if_else(str_detect(file, "PSI_Master custom report template_FY21Q4 Final"),"August Data ", "Data")
+     # sheet=if_else(str_detect(file, "PSI_Master custom report template_FY21Q4 Final"),"September Data ", "Data")
+    #sheet=if_else(str_detect(file, "PSI_Master custom report template_FY21Q4 Final"),"July_Data",    "Data")
+     df=read_xlsx(path=file,
    sheet = sheet,
    col_types = "text") %>%
   janitor::clean_names() %>%
@@ -78,27 +25,19 @@ df.list<- file.list %>%
          result_value = as.integer(result_value))
  return(df)
    })
-
 glimpse(df.list)
 
 #2021-07-01
 #map_dfr loops through each file, return combines the dataset in the most recent loop to the last
 
-#view(df)
-glimpse(df)
-names(df)
-#
-# df %>%
-#   distinct(indicator) %>%
-#   pull()
-#
-# df %>% distinct(indicator)
-#
-#   df %>% distinct(population_type)
-#
-#   df %>% distinct(other_disaggregate) %>% pull()
-#
-#   df6 %>% distinct(partner)
+glimpse(df.list)
+names(df.list)
+#TESTS
+#    df.list %>%#   distinct(indicator) %>%#   pull()
+#   df.list %>% distinct(indicator)%>% pull()
+#   df.list %>% distinct(population_type)%>% pull()
+#   df.list %>% distinct(other_disaggregate) %>% pull()
+#   df.list %>% distinct(partner_name) %>% pull()
 
 
 
@@ -110,11 +49,12 @@ names(df)
 ##### Bring in MSD to give orgunituids
 
 msd<-read_msd("C:/Users/jstephens/Documents/MSD/Zim_Genie_SITE_IM_MultipleOUs_Daily_89756ed1-21b5-46ad-854c-73803d9f23c4.txt")
+
 msd_psnu<-msd %>%
   select(c("psnu", "psnuuid")) %>%
   distinct()
 #add columns for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
-  df2 <- df %>%
+  df2 <- df.list %>%
     mutate(operatingunit = "Zimbabwe",
            orgunit = psnu)
 #add orgunitud for zim psnu's by zim msd'
@@ -124,17 +64,17 @@ df2_join<-df2 %>%
 glimpse(df2_join)
 
 
-  #df2 %>% view
-
-  #check clean names and new columns
+  # df2 %>% view
+  #
+  # # check clean names and new columns
   # test <- df2 %>%
   #   filter(indicator == c("TX_PVLS_ELIGIBLE"))
-  #
+
   # #test %>% view
   #
   # test <- df2 %>%
   #   subset(!is.na(other_disaggregate))
-  #
+
   # #test %>% view
   #
   # test <- df2 %>%
@@ -151,6 +91,11 @@ glimpse(df2_join)
   df3 <- df2_join %>%
     #pull only the CIGB indicators, none of Zim CI
     #If Zim changes indicators (ie OVC) or collects new indicators this will need to be updated
+    mutate(indicator=case_when(
+          indicator == "PREP_SCREEN"~ "PrEP_SCREEN",
+          indicator == "PREP_ELIGIBLE"  ~ "PrEP_ELIGIBLE",
+          indicator == "PREP_1MONTH"  ~ "PrEP_1MONTH",
+          TRUE ~ indicator  )) %>%
     filter(indicator %in% c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "TX_NEW_VERIFY", "TX_CURR_VERIFY", "TX_PVLS_ELIGIBLE", "TX_PVLS_VERIFY",
            "TX_RTT_VERIFY", "TX_PVLS_SAMPLE", "TX_PVLS_RESULT_DOCUMENTED", "PMTCT_EID_ELIGIBLE", "PMTCT_EID_SAMPLE", "PMTCT_EID_SAMPLE_DOCUMENTED",
            "PrEP_SCREEN", "PrEP_ELIGIBLE", "PrEP_1MONTH", "PrEP_NEW_VERIFY", "PrEP_CURR_VERIFY", "SC_ARVDISP", "SC_LMIS", "SC_CURR",
@@ -163,10 +108,11 @@ glimpse(df2_join)
            otherdisaggregate = other_disaggregate,
            val = result_value) %>%
     #keep only the CIGB template variables (drop 5)
-    select(!c(annual_target_value,id,
+    select(!c(annual_target_value,
               starts_with("required"),
               starts_with("x")))
 glimpse(df3)
+#TESTS
   # df3 %>%
   #   distinct(indicator) %>%
   #   pull()
@@ -182,33 +128,38 @@ glimpse(df3)
   # TX_PVLS_RESULT_DOCUMENTED ->       OVC_VLR
   # TX_PVLS_VERIFY ->                  OVC_VLS
 
- # df4<- df3 %>%
- #    mutate(indicator = case_when(
- #      indicator == "TX_PVLS_ELIGIBLE" & population == "OVC" ~ "OVC_VL_ELIGIBLE",
- #      indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
- #      indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
- #      TRUE ~ indicator
- #    ))
+df4<- df3 %>%
+   mutate(indicator = case_when(
+     indicator == "TX_PVLS_ELIGIBLE" & population == "OVC" ~ "OVC_VL_ELIGIBLE",
+     indicator == "TX_PVLS_ELIGIBLE" & population == "Caregivers" ~ "OVC_VL_ELIGIBLE",
+
+     indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
+     indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="Caregivers" ~ "OVC_VLR",
+
+     indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
+     indicator=="TX_PVLS_VERIFY" & population=="Caregivers" ~ "OVC_VLS",
+
+     TRUE ~ indicator
+   ))
  #
  #  #confirm recoding worked
  #  test <- df3 %>%
  #     filter(indicator %in% c("TX_PVLS_ELIGIBLE") & population %in% c("OVC")) %>%
  #    view
- #  #count=314
+ # #  #count=250
  #  test <- df4 %>%
  #    filter(indicator %in% c("OVC_VL_ELIGIBLE")) %>%
  #    view
- #  #count 314
- #
+ # #  #count 250
+ # #
  #  df4 %>%
  #    distinct(indicator) %>%
  #    pull()
- #  df5 %>%
+ #  df4 %>%
  #           filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
  #          distinct(population) %>%
  #         pull()
 
-df4<-df3
   ####################################################################
   #                        CLEANING/MUTATES ACROSS INDICATORS
   ####################################################################
@@ -216,7 +167,7 @@ df4<-df3
   df5 <- df4 %>%
     mutate(
        #add numerator to all missing numerator, recode numdenom to N/D
-         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator"|is.na(numdenom), "N",
+         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator"|numdenom=="NUMERATOR"|is.na(numdenom), "N",
                   ifelse(numdenom=="Denominator" | numdenom=="denominator", "D", numdenom)),
         # Remove population of "Non-KP (general population)" for most indicator (only in PrEP - but not 1 mo & VERIFY vars)
        population = case_when(
@@ -317,6 +268,8 @@ df4<-df3
       age=="15 - 19"~"15-19",
       age=="2-12mo"~"2-12 months",
       age=="<=2mo"~"<2 months",
+      age=="40-45"~"40-44",
+      age=="45-50"~"45-49",
       TRUE~age))
 
 
@@ -325,6 +278,10 @@ df4<-df3
   #   distinct(age) %>%
   #   pull()
 
+  df5 %>%
+    filter(age==c("45-50")) %>%
+    distinct(partner) %>%
+    pull()
 
   ############################################################################################################
 
@@ -340,68 +297,8 @@ df4<-df3
 
 glimpse(df6)
 
-# library(lubridate)
-
-#need to also recode the ovc indicators to semi-annual periods
-#previous version of code created "indicatortype" but that has been removed
-#how to recode ovc periods without creating indicator type?
-
-date <- df6 %>%
-  mutate(reportingperiod=ifelse(period>="2020-10-01" & period<="2020-12-31",
-                                "FY21 Q1",
-              ifelse(period>="2021-01-01" & period<="2021-03-31",
-                                "FY21 Q2",
-               ifelse(period>="2021-04-01" & period<="2021-06-30",
-                                 "FY21 Q3",
-               ifelse(period>="2021-07-01" & period<="2021-09-30",
-                                 "FY21 Q4",
-               # ifelse(period>="2020-10-01" & period<="2021-03-31" & indicatortype=="OVC",
-              #              "FY21 Q1 - Q2",
-                # ifelse(period>="2021-04-01" & period<="2021-09-30" & indicatortype=="OVC",
-                 #             "FY21 Q3 - Q4",
-                                                     NA))))) %>%
-    view
 
 
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    (period>="2020-10-01" & period<="2020-12-31")~"FY21 Q1",
-    (period>="2021-01-01" & period<="2021-03-31")~"FY21 Q2",
-    (period>="2021-04-01" & period<="2021-06-30")~"FY21 Q3",
-    (period>="2021-07-01" & period<="2021-09-30")~"FY21 Q4",   TRUE~period))
-rowwise() %>%
-  select(indicator=contains("OVC")) %>%
-  mutate(reportingperiod=case_when(
-    (period>="2020-10-01" & period<="2021-03-31")~"FY21 Q1 - Q2"
-    (period>="2021-04-01" & period<="2021-09-30")~"FY21 Q3 - Q4",
-    TRUE~period))
-  ungroup()
-
-
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-             TRUE~ period))
-
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    period %in% "2020-10-01":"2020-12-31"~"FY21 Q1",
-    period %in% "2021-01-01":"2021-03-31"~"FY21 Q2",
-    period %in% "2021-04-01":"2021-06-30"~"FY21 Q3",
-    period %in% "2021-07-01":"2021-09-30"~ "FY21 Q4",
-    TRUE~ period))
-
-
-date <- df6 %>%
-  mutate(reportingperiod=case_when(
-    between(period,"2020-10-01","2020-12-31")~"FY21 Q1",
-    between(period, "2021-01-01","2021-03-31")~"FY21 Q2",
-    between(period, "2021-04-01","2021-06-30")~"FY21 Q3",
-    between(period, "2021-07-01","2021-09-30")~ "FY21 Q4",
-    TRUE~ NA_character_))
 
 
   ############################################################################################################
@@ -766,7 +663,8 @@ date <- df6 %>%
     #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
     #   distinct(population) %>%
     #   pull()
-
+  [1] NA                                "Men who have sex with men (MSM)" "Transgender people (TG)"
+  [4] "Female sex workers (FSW)"        "Caregivers"                      "Non-KP (general population)"
 
     ####################################################################
     #                       TX_PVLS_RESULT_DOCUMENTED
