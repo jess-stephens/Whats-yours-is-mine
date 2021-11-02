@@ -7,13 +7,12 @@ source("Scripts/00_setup.R")
 
 setwd("./Data/Q2 resubmissions")
 
-
 file.list <- list.files(path = ".",pattern='*.xlsx', full.names = TRUE)
 
 df.list<- file.list %>%
   map_dfr(function(file){
     print(file)
-      sheet=if_else(str_detect(file, "Master custom report template_FY21Q3 PSI Final_June"),"June_Data", "Data")
+    sheet="Data"
     df=read_xlsx(path=file,
                  sheet = sheet,
                  col_types = "text") %>%
@@ -24,14 +23,8 @@ df.list<- file.list %>%
     return(df)
   })
 
-glimpse(df.list)
 
-write_tsv(df.list, "FY21Q2_Zimbabwe_CI_PSI_CeSHHAR", na = " ") #use to create pivots for QC
-
-
-
-
-
+write_tsv(df.list, "FY21Q4i_Zimbabwe_CI", na = " ") #use to create pivots for QC
 
 
 ##### Bring in MSD to give orgunituids (PSNU)
