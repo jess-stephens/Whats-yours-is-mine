@@ -3,7 +3,6 @@
   #                       FORMAT DATA
   ####################################################################
 
-
 #add columns for OU (Zimbabwe), Orgunit (unknown) and Orgunitid (unknown)
   df2 <- df.list %>%
     mutate(operatingunit = "Zimbabwe",
@@ -16,17 +15,42 @@ df2_join<-df2 %>%
 glimpse(df2_join)
 
 
-### select CIGB indicators, rename vars and order
+  # df2 %>% view
+  #
+  # # check clean names and new columns
+  # test <- df2 %>%
+  #   filter(indicator == c("TX_PVLS_ELIGIBLE"))
+
+  # #test %>% view
+  #
+  # test <- df2 %>%
+  #   subset(!is.na(other_disaggregate))
+
+  # #test %>% view
+  #
+  # test <- df2 %>%
+  #   subset(!is.na(population_type))
+  #
+  # test %>%
+  #   view
+  #
+  # df2 %>%
+  #   group_by(population_type) %>%
+  #   skim
+
 
   df3 <- df2_join %>%
-    mutate(indicator=case_when(
-      indicator=="PREP_1MONTH"  ~  "PrEP_1MONTH",
-      indicator=="PREP_SCREEN" ~  "PrEP_SCREEN",
-      indicator=="PREP_ELIGIBLE"  ~  "PrEP_ELIGIBLE",
-      TRUE~ indicator), ) %>%
     #pull only the CIGB indicators, none of Zim CI
     #If Zim changes indicators (ie OVC) or collects new indicators this will need to be updated
-    filter(indicator %in% c("TX_NEW_VERIFY")) %>%
+    mutate(indicator=case_when(
+          indicator == "PREP_SCREEN"~ "PrEP_SCREEN",
+          indicator == "PREP_ELIGIBLE"  ~ "PrEP_ELIGIBLE",
+          indicator == "PREP_1MONTH"  ~ "PrEP_1MONTH",
+          TRUE ~ indicator  )) %>%
+    filter(indicator %in% c("DREAMS_FP", "DREAMS_GEND_NORM", "GEND_GBV", "TX_NEW_VERIFY", "TX_CURR_VERIFY", "TX_PVLS_ELIGIBLE", "TX_PVLS_VERIFY",
+           "TX_RTT_VERIFY", "TX_PVLS_SAMPLE", "TX_PVLS_RESULT_DOCUMENTED", "PMTCT_EID_ELIGIBLE", "PMTCT_EID_SAMPLE", "PMTCT_EID_SAMPLE_DOCUMENTED",
+           "PrEP_SCREEN", "PrEP_ELIGIBLE", "PrEP_1MONTH", "PrEP_NEW_VERIFY", "PrEP_CURR_VERIFY", "SC_ARVDISP", "SC_LMIS", "SC_CURR",
+           "VMMC_AE", "OVC_OFFER", "OVC_ENROLL")) %>%
     #name variables so the match CIGB template, expect for period which will occur when recoding period format
     rename(mech_code = mechanism_id,
            partner = partner_name,
@@ -45,11 +69,17 @@ glimpse(df3)
 #   distinct(partner) %>%
 #   pull()
 
+#TESTS
+  # df3 %>%
+  #   distinct(indicator) %>%
+  #   pull()
+  # test <- df3 %>%
+  #   filter(indicator %in% c("TX_PVLS_ELIGIBLE")) %>%
+  #   view
+
   ####################################################################
   #                        OVC from PVLS - only q2/q4
   ####################################################################
-
-
 
   # TX_PVLS_ELIGIBLE ->                OVC_VL_ELIGIBLE
   # TX_PVLS_RESULT_DOCUMENTED ->       OVC_VLR
@@ -58,29 +88,34 @@ glimpse(df3)
 df4<- df3 %>%
    mutate(indicator = case_when(
      indicator == "TX_PVLS_ELIGIBLE" & population == "OVC" ~ "OVC_VL_ELIGIBLE",
+     indicator == "TX_PVLS_ELIGIBLE" & population == "Caregivers" ~ "OVC_VL_ELIGIBLE",
+
      indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="OVC" ~ "OVC_VLR",
+     indicator == "TX_PVLS_RESULT_DOCUMENTED" & population=="Caregivers" ~ "OVC_VLR",
+
      indicator=="TX_PVLS_VERIFY" & population=="OVC" ~ "OVC_VLS",
+     indicator=="TX_PVLS_VERIFY" & population=="Caregivers" ~ "OVC_VLS",
+
      TRUE ~ indicator
    ))
-
- # #confirm recoding worked
- # test <- df3 %>%
- #    filter(indicator %in% c("TX_PVLS_ELIGIBLE") & population %in% c("OVC")) %>%
- #   view
- # #count=314
- # test <- df4 %>%
- #   filter(indicator %in% c("OVC_VL_ELIGIBLE")) %>%
- #   view
- # #count 314
  #
- # df4 %>%
- #   distinct(indicator) %>%
- #   pull()
- # df5 %>%
- #          filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
- #         distinct(population) %>%
- #        pull()
-
+ #  #confirm recoding worked
+ #  test <- df3 %>%
+ #     filter(indicator %in% c("TX_PVLS_ELIGIBLE") & population %in% c("OVC")) %>%
+ #    view
+ # #  #count=250
+ #  test <- df4 %>%
+ #    filter(indicator %in% c("OVC_VL_ELIGIBLE")) %>%
+ #    view
+ # #  #count 250
+ # #
+ #  df4 %>%
+ #    distinct(indicator) %>%
+ #    pull()
+ #  df4 %>%
+ #           filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
+ #          distinct(population) %>%
+ #         pull()
 
   ####################################################################
   #                        CLEANING/MUTATES ACROSS INDICATORS
@@ -91,7 +126,7 @@ df4<- df3 %>%
   df5 <- df4 %>%
     mutate(
        #add numerator to all missing numerator, recode numdenom to N/D
-         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator"|is.na(numdenom), "N",
+         numdenom=ifelse(numdenom=="Numerator" |numdenom=="numerator"|numdenom=="NUMERATOR"|is.na(numdenom), "N",
                   ifelse(numdenom=="Denominator" | numdenom=="denominator", "D", numdenom)),
         # Remove population of "Non-KP (general population)" for most indicator (only in PrEP - but not 1 mo & VERIFY vars)
        population = case_when(
@@ -192,6 +227,8 @@ df4<- df3 %>%
       age=="15 - 19"~"15-19",
       age=="2-12mo"~"2-12 months",
       age=="<=2mo"~"<2 months",
+      age=="40-45"~"40-44",
+      age=="45-50"~"45-49",
       TRUE~age))
 
 
@@ -200,6 +237,10 @@ df4<- df3 %>%
   #   distinct(age) %>%
   #   pull()
 
+  df5 %>%
+    filter(age==c("45-50")) %>%
+    distinct(partner) %>%
+    pull()
 
 
   ############################################################################################################
@@ -228,6 +269,8 @@ date <- df6 %>%
 # date %>%
 #   distinct(reportingperiod) %>%
 #   pull()
+
+
 
 
   ####################################################################
@@ -610,7 +653,6 @@ date <- df6 %>%
   TX_PVLS_ELIGIBLE<- VERIFY [!(VERIFY$indicator=="TX_PVLS_ELIGIBLE" & VERIFY$numdenom=="D"),]
 #9755-144=9611
 
-
   # TX_PVLS_ELIGIBLE %>%
   #   filter(indicator==c("TX_PVLS_ELIGIBLE")) %>%
   #    distinct(numdenom) %>%
@@ -763,5 +805,6 @@ date <- df6 %>%
  #   filter(reportingperiod %in% c("FY21 Q3") )
 
   write_tsv(mech_code, "CIRG_FY21_Q2_Zimbabwe_20210908", na = " ")
+
 
 
