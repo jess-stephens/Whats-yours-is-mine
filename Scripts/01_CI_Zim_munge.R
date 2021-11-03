@@ -134,7 +134,7 @@ df4<- df3 %>%
            indicator == "PMTCT_EID_ELIGIBLE" | indicator == "PMTCT_EID_SAMPLE_DOCUMENTED" | indicator == "PrEP_1MONTH" | indicator == "SC_ARVDISP" | indicator == "SC_CURR" | indicator == "SC_LMIS" |
            indicator == "TX_PVLS_ELIGIBLE" | indicator == "TX_PVLS_RESULT_DOCUMENTED" | indicator == "TX_PVLS_SAMPLE" | indicator == "VMMC_AE")
          & (population == "Non-KP (general population)") ~ NA_character_,
-         (indicator == "OVC_VL_ELIGIBLE" | indicator == "OVC_VLR" | indicator == "OVC_VLS")  & (population== "OVC") ~ NA_character_,
+         (indicator ==  indicator == "OVC_VLR" | indicator == "OVC_VLS")  & (population== "OVC") ~ NA_character_,
          TRUE ~ population),
        sex=case_when(
          sex=="Females"~"Female",
@@ -241,6 +241,8 @@ df4<- df3 %>%
     filter(age==c("45-50")) %>%
     distinct(partner) %>%
     pull()
+need to follow up with this partner re: 40-45 & 45-50 age groups
+[1] "ORGANIZATION FOR PUBLIC HEALTH INTERVENTIONS AND DEVELOPMENT"
 
 
   ############################################################################################################
@@ -264,15 +266,31 @@ date <- df6 %>%
     TRUE ~ paste0("FY", str_sub(fiscal_year, 3, 4), " Q", reportingperiod))
   ) %>%
   relocate(reportingperiod, .before = period) %>%
-  select(!c(period, fiscal_year))
+  select(!c(period, fiscal_year)) %>%
+  filter(reportingperiod %in% c("FY21 Q4", "FY21 Q3 - Q4"))
 
 # date %>%
 #   distinct(reportingperiod) %>%
 #   pull()
 
-
-
-
+kept only FY21Q4 and FY21 Q3 - Q4 (OVC)
+[1] "FY21 Q4"      "FY21 Q3 - Q4" "FY22 Q1"      "FY21 Q2"      "FY21 Q3"
+#
+# date %>%
+#   filter(reportingperiod==c("FY21 Q2")) %>%
+#   distinct(partner, indicator) %>%  pull()
+[1] "Chemonics International, Inc."
+[1] "SC_ARVDISP" "SC_CURR"
+# date %>%
+#   filter(reportingperiod==c("FY21 Q3")) %>%
+#   distinct(partner, indicator) %>%  pull()
+[1] "Chemonics International, Inc."
+[1] "SC_ARVDISP" "SC_CURR"    "SC_LMIS"
+# date %>%
+#   filter(reportingperiod==c("FY22 Q1")) %>%
+#   distinct(partner) %>%  pull()
+[1] "Centre for Sexual Health and HIV/AIDS Research Zimbabwe"
+[2] "Population Services International"
   ####################################################################
   #                        DREAM_FP
   ####################################################################
@@ -280,7 +298,7 @@ date <- df6 %>%
   #keep age/sex in main dataset but remove the other diaggregate
   Dreams_agesex<- date %>%
     mutate(otherdisaggregate=ifelse(!is.na(age) & indicator=="DREAMS_FP", NA, otherdisaggregate))
-  #8531 obs
+  #13437 obs
 
 
   #create subset of just the other disaggregates for dreams in order to add to main dataset with age/sex
@@ -290,6 +308,7 @@ date <- df6 %>%
   #   filter(indicator==c("DREAMS_FP")) %>%
   #   distinct(otherdisaggregate) %>%
   #   pull()
+#no need to recode other disaggs
 
   Dreams_FP2<- date %>%
     subset(indicator==c("DREAMS_FP") & !is.na(otherdisaggregate)) %>%
@@ -301,7 +320,7 @@ date <- df6 %>%
 
   #combine Dreams_FP2 with Dreams_agesex: row bind
   Dreams<-rbind(Dreams_agesex, Dreams_FP2)
-  #8533 obs
+  #13439 obs
 
 
 
@@ -319,14 +338,15 @@ date <- df6 %>%
 
   # #review data for this indicator
   # Dreams_Gend<- Dreams %>%
-  #   subset(indicator==c("DREAMS_GEND_NORM")) %>% #use subset to check work
+  #   subset(indicator==c("DREAMS_GEND_NORM")) %>%
   #   view
-  # #36 have age/sex/other disagg and need to be separated
+  # #35 have age/sex/other disagg and need to be separated
+FHI & Centre for Sexual Health and HIV/AIDS Research Zimbabwe
 
   #keep age/sex in main dataset but remove the other diaggregate
   Dreams_Gend_agesex<- Dreams %>%
     mutate(otherdisaggregate=ifelse(!is.na(age) & indicator=="DREAMS_GEND_NORM", NA, otherdisaggregate))
-
+#13439 obs
 
   #create subset of just the other disaggregates for dreams in order to add to main dataset with age/sex
     #  logic to make age and sex null if other disaggregate is not null,
@@ -338,28 +358,33 @@ date <- df6 %>%
 
   #combine: row bind
   Dreams_Gend_Norm<-rbind(Dreams_Gend_agesex, Dreams_Gend_disagg)
+  #13475 obs
 
   ####################################################################
   #                        GEND_GBV
   ####################################################################
 
-  Dreams_Gend_Norm %>%
-    filter(indicator==c("GEND_GBV")) %>%
-    # distinct(population) %>%
-    view()
-    # pull()
-
-  # # [1] NA    "OVC"  -> only NA is allowable, recoded OVC to NA <- not relevant in Q3
+  # Dreams_Gend_Norm %>%
+  #   filter(indicator==c("GEND_GBV")) %>%
+  #   distinct(population) %>%
+  #   # view()
+  #   pull()
+ #  # [1] NA    "OVC"  -> only NA is allowable, recoded OVC to NA
   #
   # #check if any otherdisaggs need to be recoded
   # Dreams_Gend_Norm %>%
   #   filter(indicator==c("GEND_GBV")) %>%
   #   distinct(otherdisaggregate) %>%
   #   pull()
-  #[1] "Sexual violence - received PEP"        "Physical and/or emotional violence"    "Sexual violence - did not receive PEP"
+ # # [1] "Sexual violence - received PEP"        "Sexual violence - did not receive PEP"
+ # # [3] "Physical or emotional violence"        "Physical and/or emotional violence"
+  # Dreams_Gend_Norm %>%
+  #   filter(otherdisaggregate==c("Physical or emotional violence")) %>%
+  #   distinct(partner) %>%
+  #   pull()
+#  # "Physical or emotional violence"   -->     "Physical and/or emotional violence"
+  [1] "FAMILY AIDS CARING TRUST"
 
-
-  # "Physical or emotional violence"   -->     "Physical and/or emotional violence" in Q2 but not Q3
   GEND_GBV<-Dreams_Gend_Norm %>%
     mutate(otherdisaggregate=case_when(
           indicator=="GEND_GBV" & otherdisaggregate=="Physical or emotional violence" ~ "Violence Service Type: Physical and/or emotional violence",
@@ -386,11 +411,15 @@ date <- df6 %>%
   #combine: row bind
   GEND_GBV<-rbind(GEND_GBV_type, GEND_GBV_pep)
 
-  # GEND_GBV %>%
-  #   filter(indicator==c("GEND_GBV")) %>%
-  #   distinct(otherdisaggregate) %>%
-  #   pull()
-
+# GEND_GBV %>%
+#   filter(indicator==c("GEND_GBV")) %>%
+#   distinct(otherdisaggregate) %>%
+#   pull()
+# GEND_GBV %>%
+#   filter(indicator==c("GEND_GBV")) %>%
+#   distinct(population) %>%
+#   # view()
+#   pull()
 
 
   ####################################################################
@@ -402,20 +431,37 @@ date <- df6 %>%
   # distinct(population) %>%
   # pull()
 ## population ovc only - > recode to NA
+ [1] "Zvandiri" "OVC"      NA
+
+# GEND_GBV %>%
+#   filter(population==c("Zvandiri")) %>%
+#   distinct(partner) %>%
+#   pull()
+[1] "AFRICAID"
 
   #check if any otherdisaggs need to be recoded
-  # GEND_GBV %>%
-  #   filter(indicator==c("OVC_OFFER")) %>%
-  #   distinct(otherdisaggregate) %>%
-  #   pull()
-  # GEND_GBV %>%
-  #   filter(indicator==c("OVC_ENROLL")) %>%
-  #   distinct(otherdisaggregate) %>%
-  #   pull()
-  #no otherdisaggregates for these indicators
-  # #Tableau identified -> other disaggreagate recoded to "OVC or Caregiver: OVC"
 
+  GEND_GBV %>%
+    filter(indicator==c("OVC_ENROLL")) %>%
+    distinct(otherdisaggregate) %>%
+    pull()
+  GEND_GBV %>%
+    filter(indicator==c("OVC_OFFER")) %>%
+    distinct(otherdisaggregate) %>%
+    pull()
+  GEND_GBV %>%
+    filter(indicator==c("OVC_OFFER"),
+           otherdisaggregate==c("OVC_OFFER")) %>%
+    view()
+  GEND_GBV %>%
+    filter(indicator==c("OVC_ENROLL"),
+           otherdisaggregate==c("Active")) %>%
+    view()
 
+  no valid otherdisaggregates used for OVC_OFFER or OVC_ENROLL (should be OVC or Caregiver)
+  [1] NA          "OVC_OFFER" "Active"    "Caregiver"
+
+    #this chunk needs to be updated based on the above diagnostics
   OVC_ENROLL_OFFER<-GEND_GBV %>%
   mutate(otherdisaggregate=case_when(
     (indicator=="OVC_OFFER" | indicator=="OVC_ENROLL") ~ "OVC or Caregiver: OVC",
@@ -426,33 +472,43 @@ date <- df6 %>%
   #   # OVC_ENROLL (d) = OVC_OFFER (n)
   #need to create a subest of the OVC_OFFER to duplicate as OVC_ENROLL D and add back to dataset
    OVC_ENROLL_OFFER_D<-OVC_ENROLL_OFFER %>%
-    subset(indicator==c("OVC_OFFER")) %>%
-    mutate(indicator=="OVC_ENROLL",numdenom=="D")
+    subset(indicator==c("OVC_OFFER"))    %>%
+    mutate(indicator=case_when(indicator=="OVC_OFFER"~"OVC_ENROLL",TRUE~indicator)) %>%
+    mutate(numdenom=case_when(numdenom=="N"~"D", TRUE~numdenom))
 
    OVC_ENROLL_OFFER<-rbind(OVC_ENROLL_OFFER, OVC_ENROLL_OFFER_D)
 
-  # OVC_OFFER-> may need to bring in TX_CURR<20 (age/sex disagg) for denominator - CIGB says automatic
 
   ####################################################################
   #                       OVC_VL_ELIGIBLE
   ####################################################################
 
 #   #check if any otherdisaggs/pop need to be recoded
-  # OVC_ENROLL_OFFER %>%
-  #   filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
-  #   distinct(otherdisaggregate) %>%
-  #   pull()
+  OVC_ENROLL_OFFER %>%
+    filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+    distinct(otherdisaggregate) %>%
+    pull()
 
-# [1] "OVC"
-# no changes to disagg
+ [1] NA                 "TX_PVLS_ELIGIBLE" "OVC"              "Caregiver"        "TX_VL_ELIGIBLE"
 
-# OVC_ENROLL_OFFER %>%
-#   filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
-#   distinct(population) %>%
-#   pull()
-# NA
-  #no changes
+   OVC_ENROLL_OFFER %>%
+     filter(indicator==c("OVC_VL_ELIGIBLE"),
+            otherdisaggregate==c("TX_PVLS_ELIGIBLE","TX_VL_ELIGIBLE")) %>%
+     view()
+    # need to check with Zim team
 
+
+ OVC_ENROLL_OFFER %>%
+  filter(indicator==c("OVC_VL_ELIGIBLE")) %>%
+  distinct(population) %>%
+  pull()
+ [1] NA           "Caregivers"
+ no changes or does NA need to be OVC?
+
+    OVC_ENROLL_OFFER %>%
+   filter(indicator==c("OVC_VL_ELIGIBLE"),
+          is.na(population)) %>%
+   view()
   ####################################################################
   #                       PMTCT_EID_ELIGIBLE/PMTCT_EID_SAMPLE_DOCUMENTED
   ####################################################################
@@ -463,24 +519,18 @@ date <- df6 %>%
   #   distinct(population) %>%
   #   pull()
 
-  # Error report: Recode "<01" to "0-12 months" -> no errors in q3 data
-
   # OVC_ENROLL_OFFER %>%
   #   filter(indicator==c("PMTCT_EID_ELIGIBLE")) %>%
   #   distinct(age) %>%
   #   pull()
 # #[1] "<2 months"   "2-12 months"
 
-  # OVC_ENROLL_OFFER %>%
-  #   filter(indicator==c("PMTCT_EID_ELIGIBLE")) %>%
-  #   distinct(age) %>%
-  #   pull()
-  #don't actually see <01 in this dataset, but its in the errors report for previous entry?
-   #0-12 not applicable for PMTCT_EID_SAMPLE_DOCUMENTED
+#no changes necessary for Q4
+ PMTCT<- OVC_ENROLL_OFFER
 
-  PMTCT <- OVC_ENROLL_OFFER %>%
-       mutate(age=case_when(
-             (indicator=="PMTCT_EID_ELIGIBLE"& age=="<01") ~ "0-12 months", TRUE~ age))
+  # PMTCT <- OVC_ENROLL_OFFER %>%
+  #      mutate(age=case_when(
+  #            (indicator=="PMTCT_EID_ELIGIBLE"& age=="<01") ~ "0-12 months", TRUE~ age))
 
   ## check recode
   # PMTCT %>%
@@ -488,7 +538,6 @@ date <- df6 %>%
   #   distinct(age) %>%
   #   pull()
 # [1] "2-12 months" "<2 months"
-
 
   ####################################################################
   #                       PREP_1MONTH
@@ -500,8 +549,9 @@ date <- df6 %>%
   #   pull()
   #should have NA as populations
 
+ #no chnages to prep_1mo, currently not reporting because no otherdisaggregate - this is a placeholder
 
-  ####################################################################
+   ####################################################################
   #                       PREP_ELIGIBLE
   ####################################################################
 
@@ -509,13 +559,12 @@ date <- df6 %>%
   #no other disaggregates identified (pregnant/breastfeeding), no changes necessary at this time
 
   #prep_elg can have all populations -> no changes made
-  # PREP_1MO %>%
+  # PMTCT %>%
   #    filter(indicator==c("PrEP_ELIGIBLE")) %>%
   #   distinct(population) %>%
   #   pull()
   # [1] NA                                "Men who have sex with men (MSM)" "Female sex workers (FSW)"
   # [4] "Transgender people (TG)"         "Non-KP (general population)"
-
 
 
   ####################################################################
@@ -524,23 +573,27 @@ date <- df6 %>%
 
 #
 #   #no other disaggregates, but population and age overlap
-  # PMTCT %>%
-  #   filter(indicator==c("PrEP_SCREEN")) %>%
-  #   distinct(population) %>%
-  #   pull()
+  PMTCT %>%
+    filter(indicator==c("PrEP_SCREEN")) %>%
+    distinct(population) %>%
+    pull()
+
+ PMTCT %>%
+   filter(indicator==c("PrEP_SCREEN")) %>%
+   view()
   #some (FHI) reporting age and other disaggregate together, need to separate
 
   # keep ages in in main dataset, but remove population type
   PrEP_SCREEN_age<- PMTCT %>%
     mutate(population=ifelse(!is.na(age)| !is.na(sex), NA, population))
-  #obs 9497
+  #obs 14411
 
   #keep population in subset, clean out age/sex
   PrEP_SCREEN_type<- PMTCT %>%
     filter(indicator==c("PrEP_SCREEN") & !is.na(population)) %>%
     mutate(age=ifelse(!is.na(population), NA, age),
            sex=ifelse(!is.na(population), NA, sex))
-  #  obs 68
+  #  obs 242
 
   #combine: row bind
   PrEP_SCREEN<-rbind(PrEP_SCREEN_type, PrEP_SCREEN_age)
@@ -559,10 +612,10 @@ date <- df6 %>%
   #                       SC_ARVDISP
   ####################################################################
 
-  # PrEP_SCREEN %>%
-  #   filter(indicator==c("SC_ARVDISP")) %>%
-  #   distinct(otherdisaggregate) %>%
-  #   pull()
+  PrEP_SCREEN %>%
+    filter(indicator==c("SC_ARVDISP")) %>%
+    distinct(otherdisaggregate) %>%
+    pull()
   #
   # # [3] "ARV Category: DTG 10 bottles (30-count)" wont get added to cigb because not a valid disag - recode to other pediatric
   # # also checked age, sex, pop all correctly NA
@@ -570,16 +623,19 @@ date <- df6 %>%
   SC_ARVDISP<- PrEP_SCREEN %>%
     mutate( #recode from categories seen in excel pivot
            otherdisaggregate=ifelse(otherdisaggregate=="ARV Category: DTG 10 bottles (30-count)", "ARV Category: Other (Pediatric) bottles dispensed" , otherdisaggregate),
-          #recode from errors in tableau report - note seen in this data
-           otherdisaggregate=ifelse(otherdisaggregate=="NVP (Pediatric), (not including NVP 10) bottles", "ARV Category: NVP (Pediatric) bottles dispensed - not including NVP 10" , otherdisaggregate))
+           otherdisaggregate=ifelse(otherdisaggregate=="ARV Category: LPV/r 100/25 bottles dispensed", "ARV Category: Other (Adult) bottles dispensed" , otherdisaggregate))
 
   #check recoding
-  # SC_ARVDISP %>%
-  #   filter(indicator==c("SC_ARVDISP")) %>%
-  #   distinct(otherdisaggregate) %>%
+  # PrEP_SCREEN %>%
+  #   filter(otherdisaggregate==c("ARV Category: LPV/r 100/25 bottles dispensed")) %>%
+  #   distinct(partner) %>%
   #   pull()
-
-
+  [1] "Chemonics International, Inc."
+  # PrEP_SCREEN %>%
+  #   filter(otherdisaggregate==c("ARV Category: DTG 10 bottles (30-count)")) %>%
+  #   distinct(partner) %>%
+  #   pull()
+  [1] "Population Services International"
 
   ####################################################################
   #                       SC_CURR
@@ -599,11 +655,11 @@ date <- df6 %>%
   ####################################################################
   #                       SC_LMIS
   ####################################################################
-  #started reporting in Q3, no changes
+#no changes
   # SC_ARVDISP %>%
-  #   distinct(indicator) %>%
-  #   pull()
-
+  #   filter(indicator==c("SC_LMIS")) %>%
+  #   # distinct(otherdisaggregate) %>%
+  #   view()
 
 
   ####################################################################
@@ -611,8 +667,8 @@ date <- df6 %>%
   ####################################################################
   #Recode Verify indicators to PEPFAR Reported Sites "Site Support Type: PEPFAR supported"
 
-   view(SC_ARVDISP)
-
+dont i need to specify an indicator??? - curr, new, plvs (but not the prep_verify indicators
+                                                          )
   VERIFY<- SC_ARVDISP %>%
     mutate(otherdisaggregate=ifelse(is.na(otherdisaggregate), "Site Support Type: PEPFAR supported",otherdisaggregate),
       age=case_when(( age %in% c("<1", "1-4", "5-9", "10-14", "15-19")) ~"<20",
